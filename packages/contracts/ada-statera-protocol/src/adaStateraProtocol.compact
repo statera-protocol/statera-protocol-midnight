@@ -1,0 +1,131 @@
+pragma language_version >= 0.15.0;
+
+import CompactStandardLibrary;
+import "./CustomLibrary";
+
+enum ReservePoolState { active, frozen };
+enum LoanPosition { inactive, active, closed, liquidated };
+
+export ledger mintCounter: Counter;
+export ledger totalMint: Uint<128>;
+export ledger admin: ZswapCoinPublicKey;
+export ledger liquidationThreshold: Uint<8>;
+export ledger validAssetCoinType: Bytes<32>;
+export ledger stakePoolTotal: QualifiedCoinInfo;
+export ledger reservePoolTotal: QualifiedCoinInfo;
+export ledger nonce: Bytes<32>;
+export ledger sUSDTokenType: Bytes<32>;
+
+
+
+/* Mapping for loan request */
+export ledger borrowers: Map<Bytes<32>, Borrower>;
+/* Mapping for stakers */
+export ledger stakers: Map<Bytes<32>, Staker>;
+
+export struct Borrower {
+    id: Bytes<32>;
+    metadataHash: Bytes<32>; 
+    hFactor: Uint<4>;
+    position: LoanPosition
+}
+
+
+export struct Staker {
+    id: Bytes<32>,
+    address: ZswapCoinPublicKey,
+    amount: Uint<128>
+}
+
+/*
+    * Initialize the the contract on deployment with 
+*/
+constructor(
+    intialNonce: Bytes<32>,
+    initLiquidationThreshold: Uint<8>
+    ) {
+        validAssetCoinType = native_token();
+        admin = own_public_key();
+        totalMint = 0;
+        // Liquidatin rate in percentage set at 80%
+        liquidationThreshold = initLiquidationThreshold;
+        nonce = intialNonce;
+        sUSDTokenType = token_type(pad(32, "sUSD_token"), kernel.self());
+}
+
+witness secrete_key(): Bytes<32>;
+
+export circuit depositToCollateralPool(coin: CoinInfo, _loanId: Bytes<32>): [] {
+    assert coin.color == validAssetCoinType "Invalid collateral coin type provided to pool";
+    assert coin.value > 0 "Insufficient token amount provided";
+
+    // Receive and update onchain coin balance
+    receive(coin);
+    // Write coin to contract
+    reservePoolTotal.write_coin(coin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    // Hash metadata for shielding
+    const metadata = getMintMetadata();
+    const metadataHash = hashMintMetadata(metadata, _loanId);
+    // Update reserve pool mapping
+    const borrowersId = generateUserId(disclose(secrete_key()));
+    const newLoaner = Borrower{
+        ...default<Borrower>,
+        id: borrowersId,
+        metadataHash: metadataHash,
+    };
+
+    borrowers.insert(_loanId, newLoaner);
+}
+
+export circuit depositToStabilityPool(coin: CoinInfo, _stakeId: Bytes<32>): [] {
+    assert coin.color == sUSDTokenType "Invalid coin type provided to pool";
+    assert coin.value > 0 "Insufficient token amount provided";
+
+    // Receive and write to coin balance
+    receive(coin);    
+    stakePoolTotal.write_coin(coin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+
+    // Update statbility pool mapping
+    const stakerId = generateUserId(disclose(secrete_key()));
+    const newStaker = Staker {
+        id: stakerId,
+        address: own_public_key(),
+        amount: coin.value
+    };
+    stakers.insert(_stakeId, newStaker);
+}
+
+export circuit mint_sUSD(loan_amount: Uint<64>, _loanId: Bytes<32>): []{
+    assert borrowers.member(_loanId) "Loan Position does not exist";
+    const loanPositionToMint = borrowers.lookup(_loanId);
+    // Construct mintersId for security checks.
+    const mintersId = generateUserId(disclose(secrete_key()));
+    // Check that minter is the owner of the loan position
+    assert mintersId == loanPositionToMint.id "Cannot mint loan position: You are not the owner";
+    // Reconstruct metadataHash for security checks
+    const mintMetadata = getMintMetadata();
+    // Check that collateral asset has been locked
+    assert mintMetadata.collateral > 0 "No collateral asset locked";
+    const mintMetadataHash = hashMintMetadata(mintMetadata, _loanId);
+    // Calculate health factor for loan providding collateral asset amount and 
+    const healthFactor = calculateHFactor(mintMetadata.collateral, loan_amount, liquidationThreshold);
+    // Check to see if loan position is healthy i.e hFactor > 1
+    assert healthFactor > 1 "Unable to Mint sUSD: Loan amount is too high cmpared to collateral asset";
+
+
+    const newNonce = evolve_nonce(mintCounter, nonce);
+    mint_token(pad(32, "sUSD_token"), loan_amount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(own_public_key()));
+    nonce = newNonce;
+    mintCounter.increment(1);
+    totalMint = totalMint + loan_amount as Uint<128>;
+
+    const updatedBorrowRequest = Borrower{
+        ...loanPositionToMint,
+        position: LoanPosition.active,
+        hFactor: healthFactor as Uint<4>
+    };
+
+    borrowers.insert(_loanId, updatedBorrowRequest);
+}   
+
+

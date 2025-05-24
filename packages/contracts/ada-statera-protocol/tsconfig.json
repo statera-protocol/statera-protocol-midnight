@@ -1,0 +1,25 @@
+{
+    "include": ["src/**/*.ts"],
+    "compilerOptions": {
+        "rootDir": "src",
+
+        // For transpiling typescript code
+        "outDir": "dist",
+        "skipLibCheck": true,
+        "declaration": true,
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "sourceMap": true,
+
+        // For import management
+        "allowJs": true,
+        "strict": true,
+        "lib": ["ESNext"],
+        "target": "ES2022",
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitAny": true,
+        "isolatedModules": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true
+    }
+}

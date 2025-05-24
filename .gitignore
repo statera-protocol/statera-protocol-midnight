@@ -2,6 +2,7 @@
 
 # Dependencies
 node_modules
+managed
 .pnp
 .pnp.js
 

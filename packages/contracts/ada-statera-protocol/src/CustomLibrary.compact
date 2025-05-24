@@ -1,0 +1,55 @@
+// New indexer base url https://indexer-rs.testnet-02.midnight.network/api/v1/graphql
+
+module CustomLibrary {
+    import CompactStandardLibrary;
+    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata};
+
+    struct MintMetadata {
+        collateral: Uint<64>;
+        amountMinted: Uint<64>;
+    }
+
+    witness division(x: Uint<128>, y:Uint<128>): [Uint<128>, Uint<128>];
+    witness get_mintmetadata_private_state(): MintMetadata;
+    
+
+    circuit calculateHFactor(collateralAsset: Uint<64>, amountToLoan: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
+        assert amountToLoan > collateralAsset "Loan amount must be less than collateral asset";
+        
+        const healthFactor = DivisionFunction((collateralAsset * liquidationThreshold) as Uint<64>, amountToLoan);
+        return healthFactor;
+    }
+
+    circuit DivisionFunction(dividend: Uint<64>, divisor: Uint<64>): Uint<128> {
+        assert divisor != 0 "Invalid divisor provided";
+        
+        const [quotient, remainder] = disclose(division(dividend, divisor));
+        assert remainder < divisor "Reminder error";
+        assert (quotient * divisor) + remainder == dividend "Operand error";
+        return quotient;
+    }
+
+    circuit generateUserId(sk: Bytes<32>): Bytes<32>{
+        return persistent_hash<Vector<2, Bytes<32>>>(
+            [ 
+                pad(32, "susd:user"),
+                persistent_hash<Vector<2, Bytes<32>>>(
+                    [sk, kernel.self().bytes]
+                )
+             ]
+        );
+    }
+
+    circuit getMintMetadata(): MintMetadata{
+        const {amountMinted, collateral} = disclose(get_mintmetadata_private_state());
+        return MintMetadata {
+            collateral,
+            amountMinted 
+        };
+    } 
+
+    circuit hashMintMetadata (metadata: MintMetadata, randomizer: Bytes<32>): Bytes<32> {
+        return persistent_commit<MintMetadata>(metadata, randomizer);
+    }
+    
+}
