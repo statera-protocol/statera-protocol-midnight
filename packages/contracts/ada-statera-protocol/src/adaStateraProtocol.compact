@@ -83,9 +83,11 @@ export circuit depositToCollateralPool( coin: CoinInfo,  _collateralId: Bytes<32
     if(collateralDepositors.isEmpty()){
         // Writes the coin generated in this transaction as pool total as first deposit
          reservePoolTotal.writeCoin(disclose(coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }else{
+           // Merge the previous coin stored on the ledger with the on in the tx and writes it as the new total
+          reservePoolTotal.writeCoin(mergeCoinImmediate(reservePoolTotal, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }
-    // Merge the previous coin stored on the ledger with the on in the tx and writes it as the new total
-    reservePoolTotal.writeCoin(mergeCoinImmediate(reservePoolTotal, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+ 
     // Updates reserve pool mapping
     const collateralDepositorsId = generateUserId(disclose(secrete_key()));
     const newLoaner = Depositor{
@@ -171,9 +173,11 @@ export circuit withdrawCollateral(_collateralId: Bytes<32>, _amountToWithdraw: U
     if(sendResult.change.is_some){
         // Updates the reservePoolTotal with the change from the send transaction
         reservePoolTotal.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }else{
+      // Else we reset to default
+      reservePoolTotal.resetToDefault();
     }
-    // Else we reset to default
-    reservePoolTotal.resetToDefault();
+   
 
    // Updates the mint metadata (private state) and rehash the metadata
    // amount minted at the point of withdraw must be 0 since user must have repaid their debt to be able to withdraw or 
@@ -242,14 +246,14 @@ export circuit repay(
             metadataHash: newMetadataHash
         };
         collateralDepositors.insert(disclose(_collateralId), updatedCollateralDeposit);
-    }
-
-    const updatedCollateralDeposit = Depositor {
+    }else{
+        const updatedCollateralDeposit = Depositor {
         ...mintPositionToRepay,
         metadataHash: newMetadataHash,
         position: CollateralPosition.closed
-    };
-    collateralDepositors.insert(disclose(_collateralId), updatedCollateralDeposit);
+        };
+        collateralDepositors.insert(disclose(_collateralId), updatedCollateralDeposit);
+    }
 }
 
 
@@ -269,9 +273,11 @@ export circuit depositToStabilityPool(coin: CoinInfo): [] {
     if(stakers.isEmpty()){
         // Writes coin generated within the tx as first stake
         stakePoolTotal.writeCoin(disclose(coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }else{
+        // Merges the previous coin stored on the ledger with the one generated within the tx and writes it as the new stakePool total
+        stakePoolTotal.writeCoin(mergeCoinImmediate(stakePoolTotal, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }
-    // Merges the previous coin stored on the ledger with the one generated within the tx and writes it as the new stakePool total
-    stakePoolTotal.writeCoin(mergeCoinImmediate(stakePoolTotal, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+
 
     // Updates statbility pool mapping
     const stakersId = generateUserId(disclose(secrete_key()));
@@ -319,9 +325,11 @@ export circuit withdrawStakeReward(_amount: Uint<128>):[]{
 
     if(sendResult.change.is_some){
         reservePoolTotal.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }else{
+      // Reset Pool total if there's no change left
+      reservePoolTotal.resetToDefault();
     }
-    // Reset Pool total if there's no change left
-    reservePoolTotal.resetToDefault();
+    
     // Updates the user's pending ADA upon interaction to avoid looping to update individually
     const stakeRewardBalance = stakeReward - disclose(_amount);
     const updatedStakePosition = Staker {
