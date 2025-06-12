@@ -191,7 +191,6 @@ const displayUserPrivateState = async (
     `Current minted amount is: ${privateState?.mintMetadata.amountMinted}`
   );
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
-  logger.info(`Current division state is ${privateState?.divisionOutput}`);
 };
 
 const CIRCUIT_MAIN_LOOP_QUESTION = `

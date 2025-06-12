@@ -7,30 +7,26 @@ import { WitnessContext } from "@midnight-ntwrk/compact-runtime";
 export interface StateraPrivateState {
   readonly mintMetadata: MintMetadata;
   readonly secrete_key: Uint8Array;
-  readonly divisionOutput?: [bigint, bigint];
 }
 
 export const createPrivateStateraState = (secrete_key: Uint8Array) => ({
   secrete_key,
 });
 
-export function divisionFn(
-  dividend: number,
-  divisor: number
-): [bigint, bigint] {
-  const quotient = BigInt(dividend / divisor);
-  const reminder = BigInt(dividend % divisor);
 
-  return [quotient, reminder];
-}
+export const witnesses = {
+  division: (
+    {privateState}: WitnessContext<Ledger, StateraPrivateState>,
+    dividend: bigint,
+    divisor: bigint
+  ): [StateraPrivateState, [bigint, bigint]] => {
+    if(divisor == 0n) throw("Invaid arithemetic operation");
 
-export const witness = {
-  division: ({
-    privateState,
-  }: WitnessContext<Ledger, StateraPrivateState>): [
-    StateraPrivateState,
-    [bigint, bigint],
-  ] => [privateState, privateState.divisionOutput as [bigint, bigint]],
+    const quotient = dividend / divisor;
+    const remainder = dividend % divisor;
+    
+    return [privateState, [quotient, remainder]];
+  },
 
   // Returns the user's secrete key stored offchain in their private state
   secrete_key: ({

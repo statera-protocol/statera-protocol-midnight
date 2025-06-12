@@ -18,7 +18,7 @@ import {
   Contract,
   ledger,
   StateraPrivateState,
-  witness,
+  witnesses,
   type CoinInfo,
   createPrivateStateraState,
   MintMetadata,
@@ -27,7 +27,7 @@ import { type Logger } from "pino";
 import * as utils from "./utils.js";
 import { nativeToken } from "@midnight-ntwrk/ledger";
 
-const StateraContractInstance: StateraContract = new Contract(witness);
+const StateraContractInstance: StateraContract = new Contract(witnesses);
 
 export interface DeployedStateraAPI {
   readonly deployedContractAddress: ContractAddress;
@@ -436,7 +436,6 @@ export class StateraAPI implements DeployedStateraAPI {
           collateral: BigInt(0),
           amountMinted: BigInt(0),
         },
-        divisionOutput: [BigInt(0), BigInt(0)],
       }
     );
   }

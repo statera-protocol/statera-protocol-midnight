@@ -15,7 +15,7 @@ module CustomLibrary {
     
  
     circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
-        assert (amountToMint > collateralAmount, "Loan amount must be less than collateral asset");
+        assert (amountToMint < collateralAmount, "Loan amount must be less than collateral asset");
         const divisor: Uint<64> = 100;
         const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * divisor) as Uint<64>);
         return healthFactor;
