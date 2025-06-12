@@ -3,6 +3,7 @@
 # Dependencies
 node_modules
 managed
+midnight-level-db
 .pnp
 .pnp.js
 
