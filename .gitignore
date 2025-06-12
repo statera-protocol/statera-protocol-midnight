@@ -3,7 +3,10 @@
 # Dependencies
 node_modules
 managed
+logs
 midnight-level-db
+Dockerfile
+fetch-zk-params.sh
 .pnp
 .pnp.js
 
