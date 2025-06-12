@@ -1,0 +1,15 @@
+{"level":30,"time":1749692177928,"pid":146676,"hostname":"codebiginrs-desktop","msg":"File path for save file not found, building wallet from scratch"}
+{"level":30,"time":1749692178110,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Your wallet seed is: 0000000000000000000000000000000000000000000000000000000000000001"}
+{"level":30,"time":1749692178111,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Your wallet address is: mn_shield-addr_undeployed1mjngjmnlutcq50trhcsk3hugvt9wyjnhq3c7prryd5nqmvtzva0sxqpvzkdy4k9u7eyffff53cge62tqylevq3wqps86tdjuahsquwvucsy9kffv"}
+{"level":30,"time":1749692178113,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Your wallet balance is: 0"}
+{"level":30,"time":1749692178114,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Waiting to receive tokens..."}
+{"level":30,"time":1749692178126,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Waiting for funds. Backend lag: 0, wallet lag: 0, transactions=0"}
+{"level":30,"time":1749692190468,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Waiting for funds. Backend lag: 0, wallet lag: 0, transactions=1"}
+{"level":30,"time":1749692190470,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Your wallet balance is: 25000000000000000"}
+{"level":30,"time":1749692225750,"pid":146676,"hostname":"codebiginrs-desktop","msg":"deploy contract"}
+{"level":30,"time":1749692225803,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Random nonce bytes"}
+{"level":30,"time":1749692312336,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Deployed contract at address: 02001e077f11c4701c27a1a05fcd61fb0152de51bb5506a4028804c2ee342f464c0b"}
+{"level":30,"time":1749692334540,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Checking your stake reward..."}
+{"level":50,"time":1749692334619,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Found error 'failed assert: Can not check stake reward: You have no syake position'"}
+{"level":30,"time":1749692334619,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Exiting..."}
+{"level":30,"time":1749692336990,"pid":146676,"hostname":"codebiginrs-desktop","msg":"Goodbye"}

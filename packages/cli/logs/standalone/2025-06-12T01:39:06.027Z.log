@@ -1,0 +1,43 @@
+{"level":30,"time":1749692359370,"pid":153207,"hostname":"codebiginrs-desktop","msg":"File path for save file not found, building wallet from scratch"}
+{"level":30,"time":1749692359726,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Your wallet seed is: 0000000000000000000000000000000000000000000000000000000000000001"}
+{"level":30,"time":1749692359727,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Your wallet address is: mn_shield-addr_undeployed1mjngjmnlutcq50trhcsk3hugvt9wyjnhq3c7prryd5nqmvtzva0sxqpvzkdy4k9u7eyffff53cge62tqylevq3wqps86tdjuahsquwvucsy9kffv"}
+{"level":30,"time":1749692359729,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Your wallet balance is: 0"}
+{"level":30,"time":1749692359730,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Waiting to receive tokens..."}
+{"level":30,"time":1749692359782,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Waiting for funds. Backend lag: 0, wallet lag: 0, transactions=0"}
+{"level":30,"time":1749692371942,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Waiting for funds. Backend lag: 0, wallet lag: 0, transactions=1"}
+{"level":30,"time":1749692371944,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Your wallet balance is: 25000000000000000"}
+{"level":30,"time":1749692374623,"pid":153207,"hostname":"codebiginrs-desktop","msg":"deploy contract"}
+{"level":30,"time":1749692374662,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Random nonce bytes"}
+{"level":30,"time":1749692431958,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Deployed contract at address: 020035e0a17e6e43f2faa948041b70495adf90667010931333abb63d3a8cb5698c4e"}
+{"level":30,"time":1749692450647,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current collateral reserved is: 0"}
+{"level":30,"time":1749692450648,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current minted amount is: 0"}
+{"level":30,"time":1749692450648,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current secrete-key is: 71,132,51,183,200,121,12,81,36,51,248,37,119,141,250,201,188,231,161,214,246,254,134,71,143,31,201,209,206,95,192,108"}
+{"level":30,"time":1749692450649,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current division state is 0,0"}
+{"level":30,"time":1749692467071,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current admin is: [object Object]"}
+{"level":30,"time":1749692467072,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current collateral pool amount is: [object Object]"}
+{"level":30,"time":1749692467074,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current total value minted is: 0"}
+{"level":30,"time":1749692467076,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current nonce is: 138,108,127,191,13,162,101,44,222,124,241,13,192,133,49,133,147,110,98,94,90,207,205,122,248,155,238,121,204,229,136,62"}
+{"level":30,"time":1749692467076,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current depositor is: [object Object]"}
+{"level":30,"time":1749692467078,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current mint count is: 0"}
+{"level":30,"time":1749692467080,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stake pool is: [object Object]"}
+{"level":30,"time":1749692467082,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current valid asset color is: 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"level":30,"time":1749692467084,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stablecoin color is: 91,238,6,86,237,170,51,230,88,33,227,158,151,18,21,28,157,129,158,31,127,163,4,217,110,138,7,15,160,34,164,144"}
+{"level":30,"time":1749692467085,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stakers is: [object Object]"}
+{"level":30,"time":1749692467088,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current no of depositors is: 0"}
+{"level":30,"time":1749692467090,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current liquidation threshold is: 80"}
+{"level":30,"time":1749692489024,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current admin is: 220,166,137,110,127,226,240,10,61,99,190,33,104,223,136,98,202,226,74,119,4,113,224,140,100,109,38,13,177,98,103,95"}
+{"level":30,"time":1749692489024,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current collateral pool amount is: 0"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current total value minted is: 0"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current nonce is: 138,108,127,191,13,162,101,44,222,124,241,13,192,133,49,133,147,110,98,94,90,207,205,122,248,155,238,121,204,229,136,62"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current depositor is: "}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current mint count is: 0"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stake pool is: 0"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current valid asset color is: 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"level":30,"time":1749692489025,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stablecoin color is: 91,238,6,86,237,170,51,230,88,33,227,158,151,18,21,28,157,129,158,31,127,163,4,217,110,138,7,15,160,34,164,144"}
+{"level":30,"time":1749692489026,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current stakers is: "}
+{"level":30,"time":1749692489026,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current no of depositors is: 0"}
+{"level":30,"time":1749692489026,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Current liquidation threshold is: 80"}
+{"level":30,"time":1749692550256,"pid":153207,"hostname":"codebiginrs-desktop","msg":"deppositing collateral..."}
+{"level":50,"time":1749692550511,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Found error 'invalid index into sparse merkle tree: 0 -- write creating spend proof'"}
+{"level":30,"time":1749692550512,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Exiting..."}
+{"level":30,"time":1749692552152,"pid":153207,"hostname":"codebiginrs-desktop","msg":"Goodbye"}

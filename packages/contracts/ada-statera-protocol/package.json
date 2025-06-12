@@ -1,10 +1,12 @@
 {
-  "name": "ada-statera-protocol",
+  "name": "@statera/ada-statera-protocol",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
   "main": "index.js",
-  "packageManager": "yarn@4.0.0",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "packageManager": "yarn@4.9.2",
   "exports": {
     ".": {
       "default": "./dist/index.js",
@@ -14,8 +16,8 @@
     }
   },
   "scripts": {
-    "compact": "run-compactc ./src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
-    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cd ./src/adaStateraProtocol.compact dist",
+    "compact": "run-compactc src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "yarn build"

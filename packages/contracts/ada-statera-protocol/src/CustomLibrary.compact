@@ -5,6 +5,7 @@ module CustomLibrary {
     export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata};
 
     struct MintMetadata {
+        depositId: Bytes<32>;
         collateral: Uint<64>;
         amountMinted: Uint<64>;
     }
@@ -12,28 +13,28 @@ module CustomLibrary {
     witness division(x: Uint<128>, y:Uint<128>): [Uint<128>, Uint<128>];
     witness get_mintmetadata_private_state(): MintMetadata;
     
-
-    circuit calculateHFactor(collateralAsset: Uint<64>, amountToLoan: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
-        assert amountToLoan > collateralAsset "Loan amount must be less than collateral asset";
-        
-        const healthFactor = DivisionFunction((collateralAsset * liquidationThreshold) as Uint<64>, amountToLoan);
+ 
+    circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
+        assert (amountToMint > collateralAmount, "Loan amount must be less than collateral asset");
+        const divisor: Uint<64> = 100;
+        const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * divisor) as Uint<64>);
         return healthFactor;
     }
 
     circuit DivisionFunction(dividend: Uint<64>, divisor: Uint<64>): Uint<128> {
-        assert divisor != 0 "Invalid divisor provided";
+        assert (divisor != 0, "Invalid divisor provided");
         
         const [quotient, remainder] = disclose(division(dividend, divisor));
-        assert remainder < divisor "Reminder error";
-        assert (quotient * divisor) + remainder == dividend "Operand error";
+        assert (remainder < divisor, "Reminder error");
+        assert ((quotient * divisor) + remainder == dividend, "Operand error");
         return quotient;
     }
 
     circuit generateUserId(sk: Bytes<32>): Bytes<32>{
-        return persistent_hash<Vector<2, Bytes<32>>>(
+        return persistentHash<Vector<2, Bytes<32>>>(
             [ 
                 pad(32, "susd:user"),
-                persistent_hash<Vector<2, Bytes<32>>>(
+                persistentHash<Vector<2, Bytes<32>>>(
                     [sk, kernel.self().bytes]
                 )
              ]
@@ -41,15 +42,16 @@ module CustomLibrary {
     }
 
     circuit getMintMetadata(): MintMetadata{
-        const {amountMinted, collateral} = disclose(get_mintmetadata_private_state());
+        const {depositId, amountMinted, collateral} = disclose(get_mintmetadata_private_state());
         return MintMetadata {
+            depositId,
             collateral,
-            amountMinted 
+            amountMinted
         };
     } 
 
     circuit hashMintMetadata (metadata: MintMetadata, randomizer: Bytes<32>): Bytes<32> {
-        return persistent_commit<MintMetadata>(metadata, randomizer);
+        return persistentCommit<MintMetadata>(metadata, randomizer);
     }
     
 }
