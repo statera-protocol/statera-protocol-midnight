@@ -13,18 +13,17 @@ export const createPrivateStateraState = (secrete_key: Uint8Array) => ({
   secrete_key,
 });
 
-
 export const witnesses = {
   division: (
-    {privateState}: WitnessContext<Ledger, StateraPrivateState>,
+    { privateState }: WitnessContext<Ledger, StateraPrivateState>,
     dividend: bigint,
     divisor: bigint
   ): [StateraPrivateState, [bigint, bigint]] => {
-    if(divisor == 0n) throw("Invaid arithemetic operation");
+    if (divisor == 0n) throw "Invaid arithemetic operation";
 
     const quotient = dividend / divisor;
     const remainder = dividend % divisor;
-    
+
     return [privateState, [quotient, remainder]];
   },
 
@@ -43,4 +42,18 @@ export const witnesses = {
     StateraPrivateState,
     MintMetadata,
   ] => [privateState, privateState.mintMetadata],
+
+  set_mint_metadata: (
+    { privateState }: WitnessContext<Ledger, StateraPrivateState>,
+    { collateral, amountMinted }: MintMetadata
+  ): [StateraPrivateState, []] => [
+    {
+      ...privateState,
+      mintMetadata: {
+        ...privateState.mintMetadata,
+        collateral: collateral,
+        amountMinted: amountMinted
+      }
+    },[]
+  ],
 };

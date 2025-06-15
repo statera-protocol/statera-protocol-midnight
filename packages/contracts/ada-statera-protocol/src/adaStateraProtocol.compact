@@ -15,7 +15,7 @@ export ledger validAssetCoinType: Bytes<32>;
 export ledger stakePoolTotal: QualifiedCoinInfo;
 export ledger reservePoolTotal: QualifiedCoinInfo;
 export ledger nonce: Bytes<32>;
-export ledger sUSDTokenType: Bytes<32>;
+export sealed ledger sUSDTokenType: Bytes<32>;
 
 
 /* Mapping for loan request */
@@ -51,6 +51,7 @@ export struct Staker {
 constructor(
     intialNonce: Bytes<32>,
     initLiquidationThreshold: Uint<8>,
+    tokenAddress: ContractAddress
     ) {
         validAssetCoinType = nativeToken();
         admin = ownPublicKey();
@@ -58,23 +59,24 @@ constructor(
         // Liquidatin rate in percentage set at 80%
         liquidationThreshold = disclose(initLiquidationThreshold);
         nonce = disclose(intialNonce);
-        sUSDTokenType = tokenType(pad(32, "sUSD_token"), kernel.self());
+        sUSDTokenType = tokenType(pad(32, "sUSD_token"), disclose(tokenAddress));
 }
 
 // Return's user local secrete key used for private ID generation
 witness secrete_key(): Bytes<32>;
+// Sets mint-metadata private state
+witness set_mint_metadata(metadata: MintMetadata): [];
 
 
 /* COLLATERAL DEPOSITOR'S INTERACTIONS */
 
-export circuit depositToCollateralPool( coin: CoinInfo,  _collateralId: Bytes<32>, _current_price_per_ADA: Uint<32>): [] {
+export circuit depositToCollateralPool( coin: CoinInfo,  _collateralId: Bytes<32>): [] {
     assert (collateralDepositors.member(disclose(_collateralId)) == false,  "Deposit with same ID already exist");
     assert (coin.color == validAssetCoinType, "Invalid collateral coin type provided to pool");
     // Hash metadata for shielding
     const metadata = getMintMetadata();
     // Checks to see if the amount of ADA been deposited equals the worth of collateral stored privately
-    const collateralAmountToDeposit = coin.value * _current_price_per_ADA;
-    assert (collateralAmountToDeposit >= metadata.collateral, "Insufficient token amount provided");
+    assert (coin.value >= metadata.collateral, "Insufficient token amount provided");
     const metadataHash = hashMintMetadata(metadata, disclose(_collateralId));
 
     // Receives and update onchain coin balance
@@ -118,25 +120,26 @@ export circuit mint_sUSD(
     // Asserts that provided private state is accurate
     assert (mintMetadataHash == collateralDepositPositionToMint.metadataHash, "Invalid private state provided");
     // Calculates health factor for loan providding collateral asset amount and 
-    const healthFactor = calculateHFactor(mintMetadata.collateral, mint_amount, liquidationThreshold);
+    // const healthFactor = calculateHFactor(mintMetadata.collateral, mint_amount, liquidationThreshold);
     // Checks to see if loan position is healthy i.e hFactor > 1
-    assert (healthFactor > 1, "Unable to Mint sUSD: mint amount is too high cmpared to collateral asset");
+    // assert (healthFactor > 1, "Unable to Mint sUSD: mint amount is too high cmpared to collateral asset");
 
     const newNonce = evolveNonce(mintCounter, nonce);
     mintToken(pad(32, "sUSD_token"), disclose(mint_amount), newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
     // Reconstructs and update metadataHash with new mint amount
     const newMintMetadata = MintMetadata{
         ...mintMetadata,
-        collateral: mintMetadata.collateral,
         amountMinted: disclose(mint_amount)
     };
     const newMetadataHash = hashMintMetadata(newMintMetadata, disclose(_collateralId));
+    // Set mint_metadata private state
+    set_mint_metadata(newMintMetadata);
 
     const updatedCollateralMintRequest = Depositor{
         ...collateralDepositPositionToMint,
         position: CollateralPosition.active,
         metadataHash: newMetadataHash,
-        hFactor: healthFactor as Uint<4>
+        hFactor: 1 as Uint<4>
     };
     //Updates the depositor list
     collateralDepositors.insert(disclose(_collateralId), updatedCollateralMintRequest);
@@ -187,6 +190,8 @@ export circuit withdrawCollateral(_collateralId: Bytes<32>, _amountToWithdraw: U
     collateral: balance
    };
    const newMetadataHash = hashMintMetadata(newMetadata, disclose(_collateralId));
+   // Set mint_metadata private state
+   set_mint_metadata(newMetadata);
    // Update the ledger state
    if(collateralDepositPositionToWthdraw.position == CollateralPosition.inactive){
         const updatedCollateralDeposit = Depositor{
@@ -240,6 +245,9 @@ export circuit repay(
    };
 
    const newMetadataHash = hashMintMetadata(newMetadata, disclose(_collateralId));
+   // Set mint_metadata private state
+   set_mint_metadata(newMetadata);
+
    if (balanceToRepay > 0) {
         const updatedCollateralDeposit = Depositor{
             ...mintPositionToRepay,

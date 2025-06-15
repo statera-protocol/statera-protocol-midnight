@@ -1,5 +1,6 @@
 import { combineLatest, concat, from, map, Observable, tap } from "rxjs";
 import {
+  contractAddress,
   DeployedStateraOnchainContract,
   DerivedStateraContractState,
   StateraContract,
@@ -9,6 +10,7 @@ import {
 import {
   ContractAddress,
   encodeTokenType,
+  tokenType,
 } from "@midnight-ntwrk/compact-runtime";
 import {
   deployContract,
@@ -25,7 +27,7 @@ import {
 } from "@statera/ada-statera-protocol";
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
-import { nativeToken } from "@midnight-ntwrk/ledger";
+import { encodeContractAddress, nativeToken } from "@midnight-ntwrk/ledger";
 
 const StateraContractInstance: StateraContract = new Contract(witnesses);
 
@@ -48,11 +50,7 @@ export interface DeployedStateraAPI {
     stakeId: string
   ) => void;
   withdrawStakeReward: (amountToWithdraw: number) => void;
-  mint_sUSD: (
-    providers: StateraContractProviders,
-    mint_amount: number,
-    collateralId: string
-  ) => void;
+  mint_sUSD: (mint_amount: number, collateralId: string) => void;
   repay: (amount: number, _collateralId: string) => void;
   withdrawCollateral: (
     amountToWithdraw: number,
@@ -116,7 +114,9 @@ export class StateraAPI implements DeployedStateraAPI {
           stakePoolTotal: ledgerState.stakePoolTotal.value,
           reservePoolTotal: ledgerState.reservePoolTotal.value,
           liquidationThreshold: ledgerState.liquidationThreshold,
-          collateralDepositors: utils.createDerivedDepositorsArray(ledgerState.collateralDepositors),
+          collateralDepositors: utils.createDerivedDepositorsArray(
+            ledgerState.collateralDepositors
+          ),
           stakers: utils.createDerivedStakersArray(ledgerState.stakers),
           validAssetCoinType: ledgerState.validAssetCoinType,
           noOfDepositors: ledgerState.collateralDepositors.size(),
@@ -142,7 +142,9 @@ export class StateraAPI implements DeployedStateraAPI {
       contract: StateraContractInstance,
       initialPrivateState: await StateraAPI.getPrivateState(providers),
       privateStateId: stateraPrivateStateId,
-      args: [utils.randomNonceBytes(32, logger), BigInt(80)],
+      args: [utils.randomNonceBytes(32, logger), BigInt(80), {
+        bytes: encodeContractAddress(contractAddress)
+      }],
     });
 
     logger?.trace("Deployment successfull", {
@@ -195,6 +197,19 @@ export class StateraAPI implements DeployedStateraAPI {
     };
   }
 
+  sUSD_coin(amount: number): CoinInfo {
+    return {
+      color: encodeTokenType(
+        tokenType(
+          utils.pad("sUSD_token", 32),
+          contractAddress
+        )
+      ),
+      nonce: utils.randomNonceBytes(32),
+      value: BigInt(amount),
+    };
+  }
+
   async depositToCollateralPool(
     collateralId: string,
     amount: number,
@@ -221,8 +236,7 @@ export class StateraAPI implements DeployedStateraAPI {
     const txData =
       await this.allReadyDeployedContract.callTx.depositToCollateralPool(
         this.coin(amount),
-        utils.hexStringToUint8Array(collateralId),
-        BigInt(1)
+        utils.hexStringToUint8Array(collateralId)
       );
 
     this.logger?.trace("Collateral Deposit was successful", {
@@ -242,7 +256,7 @@ export class StateraAPI implements DeployedStateraAPI {
     this.logger?.info("Repaying debt asset...");
     // Construct tx with dynamic coin data
     const txData = await this.allReadyDeployedContract.callTx.repay(
-      this.coin(amount),
+      this.sUSD_coin(amount),
       utils.hexStringToUint8Array(_collateralId),
       BigInt(amount)
     );
@@ -287,26 +301,7 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   // Mints sUSD
-  async mint_sUSD(
-    providers: StateraContractProviders,
-    mint_amount: number,
-    collateralId: string
-  ) {
-    // First update the private state for the minter
-    const currentPrivaState = await providers.privateStateProvider.get(
-      stateraPrivateStateId
-    );
-    const newPrivateState = {
-      ...currentPrivaState,
-      mintMetadata: {
-        ...currentPrivaState?.mintMetadata,
-        amountMinted: BigInt(mint_amount),
-      },
-    };
-    await StateraAPI.setPrivateState(
-      providers,
-      newPrivateState as StateraPrivateState
-    );
+  async mint_sUSD(mint_amount: number, collateralId: string) {
     this.logger?.trace(
       `Minting sUSD for your loan position at ${collateralId}`
     );
@@ -333,7 +328,7 @@ export class StateraAPI implements DeployedStateraAPI {
     // Construct tx with dynamic coin data
     const txData =
       await this.allReadyDeployedContract.callTx.depositToStabilityPool(
-        this.coin(amount)
+        this.sUSD_coin(amount)
       );
 
     this.logger?.trace({

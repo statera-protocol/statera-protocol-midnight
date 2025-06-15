@@ -8,6 +8,7 @@ import {
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
 
+export const contractAddress = "02000a6488f2cec0601ad8044ed59d51a0d98fd47d876670b697731ed8e3d80395e5";
 export const stateraPrivateStateId = "stateraPrivateState";
 export type StateraPrivateStateId = typeof stateraPrivateStateId;
 export type StateraContract = Contract<

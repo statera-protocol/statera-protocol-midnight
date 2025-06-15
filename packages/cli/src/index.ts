@@ -268,7 +268,6 @@ const circuit_main_loop = async (
         }
         case "7": {
           await stateraApi.mint_sUSD(
-            providers,
             Number(await rli.question("How much do you want to mint? ")),
             await rli.question("Enter your collateralId ")
           );
