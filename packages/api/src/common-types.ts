@@ -32,11 +32,26 @@ export type DerivedStateraContractState = {
   readonly nonce: Uint8Array;
   readonly sUSDTokenType: Uint8Array;
   readonly stakePoolTotal: bigint;
-  readonly reservePoolTotal: bigint;
+  readonly reservePoolTotal: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    };
+    [Symbol.iterator](): Iterator<[Uint8Array, {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    }]>;
+};
   readonly liquidationThreshold: bigint;
   readonly collateralDepositors: DerivedDepositor[];
   readonly stakers: DerivedStaker[];
-  readonly validAssetCoinType: Uint8Array;
   readonly noOfDepositors: bigint;
 };
 

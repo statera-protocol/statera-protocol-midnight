@@ -188,7 +188,7 @@ const displayUserPrivateState = async (
     `Current collateral reserved is: ${privateState?.mintMetadata.collateral}`
   );
   logger.info(
-    `Current minted amount is: ${privateState?.mintMetadata.amountMinted}`
+    `Current minted amount is: ${privateState?.mintMetadata.debt}`
   );
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
 };

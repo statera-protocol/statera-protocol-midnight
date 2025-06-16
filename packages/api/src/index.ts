@@ -24,6 +24,7 @@ import {
   type CoinInfo,
   createPrivateStateraState,
   MintMetadata,
+  arraysEqual,
 } from "@statera/ada-statera-protocol";
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
@@ -112,15 +113,14 @@ export class StateraAPI implements DeployedStateraAPI {
           nonce: ledgerState.nonce,
           sUSDTokenType: ledgerState.sUSDTokenType,
           stakePoolTotal: ledgerState.stakePoolTotal.value,
-          reservePoolTotal: ledgerState.reservePoolTotal.value,
+          reservePoolTotal: ledgerState.reservePoolTotal,
           liquidationThreshold: ledgerState.liquidationThreshold,
           collateralDepositors: utils.createDerivedDepositorsArray(
-            ledgerState.collateralDepositors
+            ledgerState.depositors
           ),
           stakers: utils.createDerivedStakersArray(ledgerState.stakers),
-          validAssetCoinType: ledgerState.validAssetCoinType,
-          noOfDepositors: ledgerState.collateralDepositors.size(),
-          mintMetadata: privateState?.mintMetadata as MintMetadata,
+          noOfDepositors: ledgerState.depositors.size(),
+          mintMetadata: privateState?.depositPositions,
           secrete_key: privateState?.secrete_key,
           division: privateState,
         };
@@ -142,9 +142,14 @@ export class StateraAPI implements DeployedStateraAPI {
       contract: StateraContractInstance,
       initialPrivateState: await StateraAPI.getPrivateState(providers),
       privateStateId: stateraPrivateStateId,
-      args: [utils.randomNonceBytes(32, logger), BigInt(80), {
-        bytes: encodeContractAddress(contractAddress)
-      }],
+      args: [
+        utils.randomNonceBytes(32, logger),
+        80n,
+        {
+          bytes: encodeContractAddress(contractAddress),
+        },
+        90n,
+      ],
     });
 
     logger?.trace("Deployment successfull", {
@@ -200,10 +205,7 @@ export class StateraAPI implements DeployedStateraAPI {
   sUSD_coin(amount: number): CoinInfo {
     return {
       color: encodeTokenType(
-        tokenType(
-          utils.pad("sUSD_token", 32),
-          contractAddress
-        )
+        tokenType(utils.pad("sUSD_token", 32), contractAddress)
       ),
       nonce: utils.randomNonceBytes(32),
       value: BigInt(amount),
@@ -220,13 +222,18 @@ export class StateraAPI implements DeployedStateraAPI {
     const currentPrivaState = await providers.privateStateProvider.get(
       stateraPrivateStateId
     );
-    const newPrivateState = {
+    const newPrivateState = currentPrivaState && {
       ...currentPrivaState,
-      mintMetadata: {
-        ...currentPrivaState?.mintMetadata,
-        depositId: utils.hexStringToUint8Array(collateralId),
-        collateral: BigInt(amount),
-      },
+      depositPositions: [
+        ...currentPrivaState?.depositPositions,
+        {
+          depositId: utils.hexStringToUint8Array(collateralId),
+          mint_metadata: {
+            collateral: amount,
+            debt: BigInt(0),
+          },
+        },
+      ],
     };
     await StateraAPI.setPrivateState(
       providers,
@@ -394,12 +401,16 @@ export class StateraAPI implements DeployedStateraAPI {
     const privateState = await providers.privateStateProvider.get(
       "stateraPrivateState"
     );
+    const privateStateToLiquidate = privateState?.depositPositions.find(
+      (state) =>
+        arraysEqual(state.depositId, utils.hexStringToUint8Array(collateralId))
+    );
     // Construct tx with dynamic coin data
     const txData =
-      await this.allReadyDeployedContract.callTx.liquidateCollateralPosition(
-        privateState?.mintMetadata.collateral as bigint,
+      await this.allReadyDeployedContract.callTx.liquidateDebtPosition(
+        privateStateToLiquidate?.mint_metadata.collateral as bigint,
         utils.hexStringToUint8Array(collateralId),
-        privateState?.mintMetadata.amountMinted as bigint,
+        privateStateToLiquidate?.mint_metadata.debt as bigint,
         BigInt(hfactor)
       );
 
@@ -426,11 +437,7 @@ export class StateraAPI implements DeployedStateraAPI {
       existingPrivateState ?? {
         secrete_key: createPrivateStateraState(utils.randomNonceBytes(32))
           .secrete_key,
-        mintMetadata: {
-          depositId: utils.randomNonceBytes(32),
-          collateral: BigInt(0),
-          amountMinted: BigInt(0),
-        },
+        depositPositions: []
       }
     );
   }

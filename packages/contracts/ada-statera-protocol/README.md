@@ -10,268 +10,225 @@
 - **Liquidation Protection**: Stakers provide liquidity to cover liquidated positions
 - **Decentralized**: No central authority controls user funds or positions
 
-## Architecture
+# DeFi Lending Protocol
 
-The protocol consists of two main participant types:
+A decentralized lending and borrowing protocol that allows users to deposit collateral, mint synthetic USD (sUSD) tokens, and participate in a stability pool for liquidation rewards.
 
-1. **Depositors/Borrowers**: Deposit ADA collateral and mint sUSD tokens
-2. **Stakers**: Stake sUSD tokens to earn rewards from liquidations
+## Overview
 
-## Contract Structure
+This protocol implements a collateralized debt position (CDP) system where users can:
+- Deposit collateral to mint synthetic USD tokens (sUSD)
+- Stake sUSD tokens in a stability pool to earn liquidation rewards
+- Manage their debt positions through repayment and withdrawal
+- Participate in the liquidation process of undercollateralized positions
 
-### Core Data Types
+## Key Features
 
-#### Enums
-```compact
-enum ReservePoolState { active, frozen }
-enum CollateralPosition { inactive, active, closed, liquidated }
+### 🏦 Collateral Management
+- **Multi-collateral support**: Accept various token types as collateral
+- **Dynamic borrowing limits**: Calculate borrowing capacity based on collateral value and LTV ratios
+- **Position tracking**: Monitor debt position status (inactive, active, closed, liquidated)
+
+### 💰 Synthetic Token Minting
+- **sUSD Token**: Mint synthetic USD tokens backed by collateral
+- **Controlled supply**: Track total minted tokens and individual debt positions
+- **Secure minting**: Private metadata validation and user authentication
+
+### 🛡️ Stability Pool
+- **Liquidation buffer**: Stakers provide sUSD to absorb liquidated debt
+- **Reward distribution**: Earn proportional rewards from liquidated collateral
+- **Risk mitigation**: Help maintain protocol stability during market volatility
+
+### ⚡ Liquidation System
+- **Health factor monitoring**: Track position health based on collateral ratios
+- **Automated liquidation**: Liquidate undercollateralized positions
+- **Reward distribution**: Distribute liquidated collateral to stability pool participants
+
+## Contract Parameters
+
+| Parameter | Description | Type |
+|-----------|-------------|------|
+| `liquidationThreshold` | Minimum collateral ratio to avoid liquidation (default: 80%) | `Uint<8>` |
+| `LVT` | Maximum loan-to-value ratio for borrowing | `Uint<8>` |
+| `totalMint` | Total amount of sUSD tokens minted | `Uint<128>` |
+| `ADA_sUSD_index` | Liquidation reward tracking index | `Uint<128>` |
+
+## Data Structures
+
+### Depositor
 ```
-
-#### Key Structs
-```compact
 struct Depositor {
-    id: Bytes<32>;              // Private user identifier
-    metadataHash: Bytes<32>;    // Hash of private collateral data
-    hFactor: Uint<4>;          // Health factor (1-15 scale)
-    position: CollateralPosition // Current position status
-}
-
-struct Staker {
-    id: Bytes<32>;                    // Private staker identifier
-    address: ZswapCoinPublicKey;      // Public key for rewards
-    stakeAmount: Uint<128>;           // Amount of sUSD staked
-    entry_ADA_SUSD_index: Uint<128>;  // Entry point for reward calculation
-    pending_ADA: Uint<128>            // Accumulated pending rewards
-}
-
-struct MintMetadata {
-    depositId: Bytes<32>;    // Unique deposit identifier
-    collateral: Uint<64>;    // Amount of ADA collateral (private)
-    amountMinted: Uint<64>   // Amount of sUSD minted (private)
+    id: Bytes<32>;              // Unique user identifier
+    metadataHash: Bytes<32>;    // Hash of private position data
+    hFactor: Uint<4>;           // Health factor of the position
+    position: DebtPositionStatus; // Current status of the position
+    coinType: Bytes<32>;        // Type of collateral deposited
+    borrowLimit: Uint<32>;      // Maximum borrowable amount
 }
 ```
 
-### Global State Variables
+### Staker
+```
+struct Staker {
+    id: Bytes<32>;                    // Unique staker identifier
+    address: ZswapCoinPublicKey;      // Staker's public key
+    stakeAmount: Uint<128>;           // Amount of sUSD staked
+    entry_ADA_SUSD_index: Uint<128>;  // Index at stake entry
+    pending_ADA: Uint<128>;           // Pending liquidation rewards
+}
+```
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `mintCounter` | Counter | Tracks total number of mint operations |
-| `totalMint` | Uint<128> | Total sUSD tokens minted |
-| `admin` | ZswapCoinPublicKey | Contract administrator |
-| `liquidationThreshold` | Uint<8> | Liquidation threshold percentage (default: 80%) |
-| `validAssetCoinType` | Bytes<32> | Valid collateral asset type (ADA) |
-| `stakePoolTotal` | QualifiedCoinInfo | Total sUSD in stability pool |
-| `reservePoolTotal` | QualifiedCoinInfo | Total ADA in reserve pool |
-| `nonce` | Bytes<32> | Cryptographic nonce for token minting |
-| `sUSDTokenType` | Bytes<32> | sUSD token type identifier |
-| `collateralDepositors` | Map<Bytes<32>, Depositor> | All depositor positions |
-| `stakers` | Map<Bytes<32>, Staker> | All staker positions |
-| `ADA_sUSD_index` | Uint<128> | Global index for staker rewards |
+### Position Status
+```
+enum DebtPositionStatus {
+    inactive,    // No debt taken
+    active,      // Active debt position
+    closed,      // Debt fully repaid
+    liquidated   // Position liquidated
+}
+```
 
 ## Core Functions
 
-### Depositor/Borrower Functions
+### For Depositors
 
-#### `depositToCollateralPool`
-```compact
-export circuit depositToCollateralPool(
-    coin: CoinInfo, 
-    _collateralId: Bytes<32>, 
-    _current_price_per_ADA: Uint<32>
-): []
-```
+#### `depositToCollateralPool(coin: CoinInfo, _depositId: Bytes<32>)`
+Deposit collateral tokens to create a new borrowing position.
 
-**Purpose**: Allows users to deposit ADA collateral into the reserve pool.
+**Parameters:**
+- `coin`: Collateral token information
+- `_depositId`: Unique identifier for the deposit position
 
-**Process**:
-1. Validates the collateral ID is unique
-2. Confirms the coin type is valid ADA
-3. Retrieves private metadata using witnesses
-4. Verifies collateral amount matches the USD value
-5. Adds collateral to the reserve pool
-6. Creates a new `Depositor` entry with `inactive` status
+**Requirements:**
+- Deposit ID must be unique
+- Sufficient collateral amount must be provided
 
-**Privacy**: The actual collateral amount is stored off-chain and verified through zero-knowledge proofs.
+#### `mint_sUSD(mint_amount: Uint<64>, _depositId: Bytes<32>)`
+Mint synthetic USD tokens against deposited collateral.
 
-#### `mint_sUSD`
-```compact
-export circuit mint_sUSD(
-    mint_amount: Uint<64>, 
-    _collateralId: Bytes<32>
-): []
-```
+**Parameters:**
+- `mint_amount`: Amount of sUSD to mint
+- `_depositId`: Existing deposit position ID
 
-**Purpose**: Allows depositors to mint sUSD tokens against their collateral.
+**Requirements:**
+- Valid deposit position must exist
+- User must own the position
+- Mint amount must not exceed borrow limit
 
-**Process**:
-1. Verifies the caller owns the collateral position
-2. Reconstructs and validates private metadata
-3. Calculates health factor: `(collateral × liquidationThreshold) / (mintAmount × 100)`
-4. Ensures health factor > 1 for safety
-5. Mints sUSD tokens to the caller
-6. Updates position status to `active`
+#### `withdrawCollateral(_depositId: Bytes<32>, _amountToWithdraw: Uint<32>, to: Bytes<32>)`
+Withdraw collateral from a position.
 
-**Health Factor**: Critical safety measure preventing over-leveraging.
+**Parameters:**
+- `_depositId`: Deposit position ID
+- `_amountToWithdraw`: Amount of collateral to withdraw
+- `to`: Recipient address
 
-#### `withdrawCollateral`
-```compact
-export circuit withdrawCollateral(
-    _collateralId: Bytes<32>, 
-    _amountToWithdraw: Uint<32>, 
-    to: Bytes<32>
-): []
-```
+**Requirements:**
+- Position must be inactive or closed
+- User must own the position
+- Sufficient collateral must be available
 
-**Purpose**: Allows users to withdraw collateral from closed or inactive positions.
+#### `repay(coin: CoinInfo, _depositId: Bytes<32>, _amountToRepay: Uint<32>)`
+Repay minted sUSD tokens to reduce debt.
 
-**Restrictions**:
-- Only available for `closed` or `inactive` positions
-- Cannot withdraw from `active` or `liquidated` positions
-- Must not exceed available collateral
+**Parameters:**
+- `coin`: sUSD tokens to repay
+- `_depositId`: Deposit position ID
+- `_amountToRepay`: Amount of debt to repay
 
-#### `repay`
-```compact
-export circuit repay(
-    coin: CoinInfo, 
-    _collateralId: Bytes<32>, 
-    _amountToRepay: Uint<32>
-): []
-```
+**Requirements:**
+- Position must be active
+- Must provide valid sUSD tokens
+- Repay amount must not exceed debt
 
-**Purpose**: Allows borrowers to repay their sUSD debt.
+### For Stakers
 
-**Process**:
-1. Validates the caller owns the position
-2. Confirms the position is `active`
-3. Burns the repaid sUSD tokens
-4. Updates the debt balance
-5. Changes position to `closed` if fully repaid
+#### `depositToStabilityPool(coin: CoinInfo)`
+Stake sUSD tokens in the stability pool to earn liquidation rewards.
 
-### Staker Functions
+**Parameters:**
+- `coin`: sUSD tokens to stake
 
-#### `depositToStabilityPool`
-```compact
-export circuit depositToStabilityPool(coin: CoinInfo): []
-```
+**Requirements:**
+- Must provide valid sUSD tokens
+- User cannot have existing stake position
 
-**Purpose**: Allows users to stake sUSD tokens in the stability pool.
+#### `checkStakeReward()`
+Check available liquidation rewards for a staking position.
 
-**Benefits**:
-- Earns rewards from liquidations
-- Helps maintain protocol stability
-- Provides liquidity for debt coverage
+**Returns:**
+- `Uint<128>`: Total available rewards
+- `Staker`: Updated staker information
 
-#### `checkStakeReward`
-```compact
-export circuit checkStakeReward(): [Uint<128>, Staker]
-```
+#### `withdrawStakeReward(_amount: Uint<128>)`
+Withdraw earned liquidation rewards.
 
-**Purpose**: Calculates accumulated staking rewards.
+**Parameters:**
+- `_amount`: Amount of rewards to withdraw
 
-**Formula**: 
-```
-earned_ADA = user_sUSD × (current_ADA_per_sUSD - user_entry_ADA_per_sUSD) + pending_balance
-```
+**Requirements:**
+- Must have active stake position
+- Withdrawal amount must not exceed available rewards
 
-#### `withdrawStakeReward`
-```compact
-export circuit withdrawStakeReward(_amount: Uint<128>): []
-```
+### For Liquidators
 
-**Purpose**: Allows stakers to withdraw their earned ADA rewards.
+#### `liquidateDebtPosition(_collateralAmt: Uint<64>, _depositId: Bytes<32>, _debtdebt: Uint<64>, _currentHFactor: Uint<4>)`
+Liquidate an undercollateralized debt position.
 
-### Liquidation System
+**Parameters:**
+- `_collateralAmt`: Amount of collateral to liquidate
+- `_depositId`: Position to liquidate
+- `_debtdebt`: Amount of debt to burn
+- `_currentHFactor`: Current health factor
 
-#### `liquidateCollateralPosition`
-```compact
-export circuit liquidateCollateralPosition(
-    _collateralAmt: Uint<64>, 
-    _collateralId: Bytes<32>, 
-    _debtAmountMinted: Uint<64>,
-    _currentHFactor: Uint<4>
-): []
-```
+**Requirements:**
+- Position must exist
+- Position must be undercollateralized
 
-**Purpose**: Liquidates unhealthy positions (health factor < 1).
+### Admin Functions
 
-**Process**:
-1. Burns equivalent sUSD from the stability pool
-2. Updates the global ADA/sUSD index for reward distribution
-3. Marks the position as `liquidated`
+#### `resetLiquidationThreshold(_liquidationThreshold: Uint<8>, _LVT: Uint<8>)`
+Update protocol parameters (admin only).
 
-**Automation**: Designed to be called by off-chain monitoring systems.
+**Parameters:**
+- `_liquidationThreshold`: New liquidation threshold
+- `_LVT`: New loan-to-value ratio
 
-## Privacy Features
+## Security Features
 
-### Witness Functions
-The contract leverages Midnight's witness system for privacy:
+### Private State Management
+- **Metadata hashing**: Sensitive position data is hashed for privacy
+- **User authentication**: Secret key verification for position ownership
+- **State validation**: Metadata integrity checks prevent manipulation
 
-- `secrete_key()`: Returns user's private key for ID generation
-- `get_mintmetadata_private_state()`: Retrieves private collateral data
-- `division()`: Performs private arithmetic operations
-
-### Data Shielding
-- Collateral amounts are never stored on-chain
-- Debt positions remain private
-- Only cryptographic hashes and commitments are public
-
-## Security Measures
+### Risk Management
+- **Collateralization ratios**: Maintain healthy collateral-to-debt ratios
+- **Liquidation thresholds**: Automatic liquidation of risky positions
+- **Health factor monitoring**: Continuous position health assessment
 
 ### Access Control
-- User ID generation: `persistentHash(["susd:user", hash(secretKey, contractAddress)])`
-- Metadata validation through cryptographic hashes
-- Position ownership verification
+- **Owner verification**: Users can only modify their own positions
+- **Admin functions**: Critical parameters protected by admin-only access
+- **Position status validation**: State-dependent function access
 
-### Economic Safety
-- **Liquidation Threshold**: Default 80% prevents under-collateralization
-- **Health Factor Monitoring**: Continuous assessment of position safety
-- **Over-Collateralization**: Requires >100% collateral ratio
+## Contract Compilation
+```ts
+  // Run the command below to build and compile the contract with the contracts/st
+  npx turbo run build
+```
 
-### Technical Safeguards
-- Input validation on all parameters
-- State consistency checks
-- Atomic operations for fund transfers
+## Contributing
 
-## Usage Examples
+This protocol is designed for educational and development purposes. When implementing in production:
 
-### For Depositors
-1. **Deposit Collateral**: Call `depositToCollateralPool` with ADA
-2. **Mint sUSD**: Call `mint_sUSD` to borrow against collateral
-3. **Monitor Health**: Ensure health factor stays above 1
-4. **Repay Debt**: Use `repay` to return sUSD and close position
-5. **Withdraw**: Call `withdrawCollateral` to retrieve ADA
+- Conduct thorough security audits
+- Implement comprehensive testing
+- Consider oracle integration for price feeds
+- Add emergency pause mechanisms
+- Implement governance features
 
-### For Stakers
-1. **Stake sUSD**: Call `depositToStabilityPool`
-2. **Check Rewards**: Use `checkStakeReward` to view earnings
-3. **Withdraw Rewards**: Call `withdrawStakeReward` to claim ADA
+## License
 
-## Risk Considerations
-
-### For Users
-- **Liquidation Risk**: Positions with health factor < 1 face liquidation
-- **Market Risk**: ADA price volatility affects collateral value
-- **Smart Contract Risk**: Potential bugs or exploits
-
-### For Stakers
-- **Impermanent Loss**: Staked sUSD may be burned during liquidations
-- **Reward Volatility**: Earnings depend on liquidation frequency
-
-## Technical Requirements
-
-- **Blockchain**: Midnight Network
-- **Language**: Compact (Midnight's smart contract language)
-- **Privacy**: Zero-knowledge proofs for sensitive data
-- **Indexer**: GraphQL endpoint for off-chain data queries
-
-## Contract Deployment
-
-The contract initializes with:
-- Native ADA as valid collateral
-- 80% liquidation threshold
-- Administrative controls
-- Empty staker and depositor pools
+[Add appropriate license information]
 
 ---
-
-*This documentation covers the core functionality of the Statera protocol. For implementation details and advanced usage, refer to the contract source code and Midnight blockchain documentation.*
