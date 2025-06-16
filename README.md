@@ -22,7 +22,7 @@ Governance Stakers: Stake Statera native token ($STAT) to earn a share of protoc
 
 # HOW TO TEST LOCALLY
 
-# Clone the Project
+## Clone the Project
 ```js
     // Clone the repository
     git clone "https://github.com/LucentLabss/statera-protocol.git"
@@ -34,7 +34,7 @@ Governance Stakers: Stake Statera native token ($STAT) to earn a share of protoc
     yarn install
 ```
 
-# Setup Prebaked Proof Server
+## Setup Prebaked Proof Server
 Refrence: https://github.com/bricktowers/midnight-proof-server
 
 ```js
@@ -47,7 +47,7 @@ Refrence: https://github.com/bricktowers/midnight-proof-server
   -t midnight-proof-server:prebaked .
 ```
 
-# Testing The smart contract via a CLI DApp
+## Testing The smart contract via a CLI DApp
 ```js
     // Witin 'packages/cli' run the comman below to build the CLI DApp
     npx turbo run build
