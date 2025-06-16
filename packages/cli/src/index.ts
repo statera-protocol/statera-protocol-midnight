@@ -128,16 +128,13 @@ const displayLedgerState = async (
     );
     logger.info(`Current total value minted is: ${ledgerState.totalMint}`);
     logger.info(`Current nonce is: ${ledgerState.nonce}`);
-    logger.info(`Current depositor is: ${ledgerState.collateralDepositors}`);
+    logger.info(`Current depositor is: ${ledgerState.reservePoolTotal}`);
     logger.info(`Current mint count is: ${ledgerState.mintCounter}`);
     logger.info(`Current stake pool is: ${ledgerState.stakePoolTotal}`);
-    logger.info(
-      `Current valid asset color is: ${ledgerState.validAssetCoinType}`
-    );
     logger.info(`Current stablecoin color is: ${ledgerState.sUSDTokenType}`);
     logger.info(`Current stakers is: ${ledgerState.stakers}`);
     logger.info(
-      `Current no of depositors is: ${ledgerState.collateralDepositors.size()}`
+      `Current no of depositors is: ${ledgerState.reservePoolTotal.size()}`
     );
     logger.info(
       `Current liquidation threshold is: ${ledgerState.liquidationThreshold}`
@@ -184,11 +181,8 @@ const displayUserPrivateState = async (
 
   if (privateState === null)
     logger.info(`There is no private state stored at ${stateraPrivateStateId}`);
-  logger.info(
-    `Current collateral reserved is: ${privateState?.mintMetadata.collateral}`
-  );
-  logger.info(
-    `Current minted amount is: ${privateState?.mintMetadata.debt}`
+  console.log(
+    `Current collateral reserved is:`, privateState?.depositPositions
   );
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
 };
