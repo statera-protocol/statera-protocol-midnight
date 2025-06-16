@@ -263,13 +263,6 @@ The contract leverages Midnight's witness system for privacy:
 - **Language**: Compact (Midnight's smart contract language)
 - **Privacy**: Zero-knowledge proofs for sensitive data
 - **Indexer**: GraphQL endpoint for off-chain data queries
-
-## Contract Deployment
-
-The contract initializes with:
-- Native ADA as valid collateral
-- 80% liquidation threshold
-- Administrative controls
 - Empty staker and depositor pools
 
 ---
