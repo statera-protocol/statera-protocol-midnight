@@ -155,16 +155,13 @@ const displayDerivedLedgerState = async (
   logger.info(`Current depositor is: ${currentState.collateralDepositors}`);
   logger.info(`Current mint count is: ${currentState.mintCounter}`);
   logger.info(`Current stake pool is: ${currentState.stakePoolTotal}`);
-  logger.info(
-    `Current valid asset color is: ${currentState.validAssetCoinType}`
-  );
   logger.info(`Current stablecoin color is: ${currentState.sUSDTokenType}`);
   logger.info(`Current stakers is: ${currentState.stakers}`);
   logger.info(`Current no of depositors is: ${currentState.noOfDepositors}`);
   logger.info(
     `Current liquidation threshold is: ${currentState.liquidationThreshold}`
   );
-};
+};  
 
 const getUserPrivateState = async (
   providers: StateraContractProviders
