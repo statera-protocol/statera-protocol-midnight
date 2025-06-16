@@ -20,7 +20,7 @@ Stakers/Liquidators: Stake sUSD tokens to repay liquidatable positions and earn 
 Governance Stakers: Stake Statera native token ($STAT) to earn a share of protocol usage fee and participate in governance.
 
 
-## HOW TO TEST LOCALLY
+# HOW TO TEST LOCALLY
 
 # Clone the Project
 ```js
