@@ -18,3 +18,39 @@ The protocol consists of three main participant types:
 Depositors/Borrowers: Deposit supported collateral and mint sUSD tokens.
 Stakers/Liquidators: Stake sUSD tokens to repay liquidatable positions and earn bonuses from liquidations.
 Governance Stakers: Stake Statera native token ($STAT) to earn a share of protocol usage fee and participate in governance.
+
+
+## HOW TO TEST LOCALLY
+
+# Clone the Project
+```js
+    // Clone the repository
+    git clone "https://github.com/LucentLabss/statera-protocol.git"
+    // Install node-js lts
+    nvm install 22 
+    // Set v22.16.0 as default
+    nvm alias default 22
+    // Install all dependencies
+    yarn install
+```
+
+# Setup Prebaked Proof Server
+Refrence: https://github.com/bricktowers/midnight-proof-server
+
+```js
+     // Navigate to the coontract folder
+    cd packages/cli
+    // How to build the prebaked proof server
+    docker build \
+  --build-arg PROOF_SERVER_VERSION=4.0.0 \
+  --build-arg CIRCUIT_PARAM_RANGE="10 11 12 13 14 15 16 17 18 19 20 21" \
+  -t midnight-proof-server:prebaked .
+```
+
+# Testing The smart contract via a CLI DApp
+```js
+    // Witin 'packages/cli' run the comman below to build the CLI DApp
+    npx turbo run build
+    // Start the Dapp in standalone mode
+    yarn standalone
+```
