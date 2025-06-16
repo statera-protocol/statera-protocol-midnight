@@ -60,11 +60,9 @@ export interface DeployedStateraAPI {
   ) => void;
   checkStakeReward: () => void;
 }
-
 /**
  * NB: Declaring a class implements a given type, means it must contain all defined properties and methods, then take on other extra properties or class
  */
-// Initializes a new contract
 
 export class StateraAPI implements DeployedStateraAPI {
   deployedContractAddress: string;
@@ -229,7 +227,7 @@ export class StateraAPI implements DeployedStateraAPI {
         {
           depositId: utils.hexStringToUint8Array(collateralId),
           mint_metadata: {
-            collateral: amount,
+            collateral: BigInt(amount),
             debt: BigInt(0),
           },
         },
