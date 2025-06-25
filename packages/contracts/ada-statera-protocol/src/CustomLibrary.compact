@@ -8,12 +8,11 @@ module CustomLibrary {
         debt: Uint<64>;
     }
 
-    witness division(x: Uint<128>, y:Uint<128>): [Uint<128>, Uint<128>];
+    witness division(x: Uint<64>, y:Uint<64>): [Uint<64>, Uint<64>];
     witness get_mintmetadata_private_state(_depositId: Bytes<32>): MintMetadata;
     
  
     circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
-        assert (amountToMint < collateralAmount, "Loan amount must be less than collateral asset");
         const divisor: Uint<64> = 100;
         const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * divisor) as Uint<64>);
         return healthFactor;
