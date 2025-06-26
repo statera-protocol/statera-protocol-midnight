@@ -122,7 +122,6 @@ const displayLedgerState = async (
       `There is no token mint contract deployed at ${contractAddress}`
     );
   } else {
-    logger.info(`Current admin is: ${ledgerState.admin}`);
     logger.info(
       `Current collateral pool amount is: ${ledgerState.reservePoolTotal}`
     );
@@ -147,21 +146,24 @@ const displayDerivedLedgerState = async (
   logger: Logger
 ): Promise<void> => {
   logger.info(`Current admin is: ${currentState.admin}`);
-  logger.info(
-    `Current collateral pool amount is: ${currentState.reservePoolTotal}`
+  console.log(
+    `Current collateral pool amount is:`,
+    currentState.reservePoolTotal
   );
-  logger.info(`Current total value minted is: ${currentState.totalMint}`);
-  logger.info(`Current nonce is: ${currentState.nonce}`);
-  logger.info(`Current depositor is: ${currentState.collateralDepositors}`);
-  logger.info(`Current mint count is: ${currentState.mintCounter}`);
-  logger.info(`Current stake pool is: ${currentState.stakePoolTotal}`);
-  logger.info(`Current stablecoin color is: ${currentState.sUSDTokenType}`);
-  logger.info(`Current stakers is: ${currentState.stakers}`);
-  logger.info(`Current no of depositors is: ${currentState.noOfDepositors}`);
-  logger.info(
-    `Current liquidation threshold is: ${currentState.liquidationThreshold}`
+  console.log(`Current contract address:`, currentState.stateraContractAddress);
+  console.log(`Current total value minted is:`, currentState.totalMint);
+  console.log(`Current nonce is:`, currentState.nonce);
+  console.log(`Current depositor is:`, currentState.collateralDepositors);
+  console.log(`Current mint count is:`, currentState.mintCounter);
+  console.log(`Current stake pool is:`, currentState.stakePoolTotal);
+  console.log(`Current stablecoin color is:`, currentState.sUSDTokenType);
+  console.log(`Current stakers is:`, currentState.stakers);
+  console.log(`Current no of depositors is:`, currentState.noOfDepositors);
+  console.log(
+    `Current liquidation threshold is:`,
+    currentState.liquidationThreshold
   );
-};  
+};
 
 const getUserPrivateState = async (
   providers: StateraContractProviders
@@ -179,15 +181,17 @@ const displayUserPrivateState = async (
   if (privateState === null)
     logger.info(`There is no private state stored at ${stateraPrivateStateId}`);
   console.log(
-    `Current collateral reserved is:`, privateState?.depositPositions
+    `Current collateral reserved is:`,
+    privateState?.depositPositions
   );
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
 };
 
+// Updated menu with new option
 const CIRCUIT_MAIN_LOOP_QUESTION = `
 You can do one of the following:
   1. Check your stake reward
-  2. Deposit tDUST into collaateral pool
+  2. Deposit tDUST into collateral pool
   3. Deposit sUSD into stake pool
   4. Display the current ledger state (known by everyone)
   5. Display the current derived ledger state (known by everyone)
@@ -197,9 +201,14 @@ You can do one of the following:
   9. Withdraw stake reward
   10. Withdraw deposited collateral
   11. Exit
+  12. Display comprehensive wallet state (NEW)
+  13. Set sUSDTokenTYpe (ADMIN ONLY)
+  14. Liquidate collateral position (LIQUIDATOR ONLY)
+
 Which would you like to do? `;
 
 const circuit_main_loop = async (
+  wallet: Wallet & Resource,
   providers: StateraContractProviders,
   rli: Interface,
   logger: Logger
@@ -209,10 +218,13 @@ const circuit_main_loop = async (
 
   let currentState: DerivedStateraContractState | undefined;
   const stateObserver = {
-    next: (state: DerivedStateraContractState) => (currentState = state),
+    next: (state: DerivedStateraContractState) => {
+      currentState = state;
+    },
   };
 
   const subscription = stateraApi.state.subscribe(stateObserver);
+
   try {
     while (true) {
       const choice = await rli.question(CIRCUIT_MAIN_LOOP_QUESTION);
@@ -226,16 +238,26 @@ const circuit_main_loop = async (
             `How much do you want to deposit?`
           );
           await stateraApi.depositToCollateralPool(
-            await rli.question("Enter newly generated collateral id "),
+            await rli.question("Enter newly generated collateral id:"),
             Number(amountToDeposit),
             providers
           );
+
+          // Wait for wallet to sync after deposit
+          logger.info("Waiting for wallet to sync after collateral deposit...");
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
         case "3": {
           await stateraApi.depositToStakePool(
-            Number(await rli.question("How much do you want to stake "))
+            Number(await rli.question("How much do you want to stake:"))
           );
+
+          // Wait for wallet to sync after staking
+          logger.info("Waiting for wallet to sync after staking...");
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
         case "4": {
@@ -258,48 +280,138 @@ const circuit_main_loop = async (
           break;
         }
         case "7": {
-          await stateraApi.mint_sUSD(
-            Number(await rli.question("How much do you want to mint? ")),
-            await rli.question("Enter your collateralId ")
+          const mintAmount = Number(
+            await rli.question("How much do you want to mint?")
           );
+          const collateralId = await rli.question("Enter your collateralId:");
+
+          logger.info("Initiating mint operation...");
+          await stateraApi.mint_sUSD(mintAmount, collateralId);
+
+          // Critical: Wait for wallet to sync and reflect minted tokens
+          logger.info("Waiting for wallet to sync after minting...");
+          await waitForWalletSyncAfterOperation(wallet, logger);
+
+          // Wait specifically for the sUSD token balance to appear
+          if (currentState?.sUSDTokenType) {
+            try {
+              logger.info(
+                "Waiting for minted sUSD tokens to appear in wallet..."
+              );
+              const newBalance = await waitForTokenBalance(
+                wallet,
+                utils.uint8arraytostring(currentState.sUSDTokenType),
+                BigInt(mintAmount),
+                logger,
+                45000 // 45 second timeout
+              );
+              logger.info(
+                `✅ Minted sUSD tokens confirmed! New balance: ${newBalance}`
+              );
+            } catch (error) {
+              logger.warn(
+                "Timeout waiting for minted tokens to appear in wallet"
+              );
+              logger.info("Displaying current wallet state:");
+            }
+          }
+
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
-         case "8": {
+        case "8": {
           await stateraApi.repay(
             Number(
-              await rli.question("How much of your debt do you want to offset ")
+              await rli.question("How much of your debt do you want to offset:")
             ),
-            await rli.question("Enter ID of debt position to repay ")
+            await rli.question("Enter ID of debt position to repay:")
           );
+
+          // Wait for wallet to sync after repayment
+          logger.info("Waiting for wallet to sync after repayment...");
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
         case "9": {
           await stateraApi.withdrawStakeReward(
             Number(
               await rli.question(
-                "How much of your stake reward do you want to withdraw "
+                "How much of your stake reward do you want to withdraw:"
               )
             )
           );
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after stake reward withdrawal..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
         case "10": {
           await stateraApi.withdrawCollateral(
             Number(
               await rli.question(
-                "How much of your collateral do you want to withdraw "
+                "How much of your collateral do you want to withdraw:"
               )
             ),
             await rli.question(
-              "Enter ID of colateral position you want to withdraw from "
+              "Enter ID of collateral position you want to withdraw from:"
             ),
-            await rli.question("Enter recipent wallet address ")
+            Number(
+              await rli.question(
+                "What is the current oracl price per collateral asset:"
+              )
+            )
           );
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after collateral withdrawal..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
         case "11": {
           logger.info("Exiting.......");
           return;
+        }
+        case "12": {
+          // New option to manually check wallet state
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+        case "13": {
+          // New option to manually check wallet state
+          logger.info("Setting sUSDTokenType...");
+          await stateraApi.setSUSDTokenType();
+          logger.info(
+            "Waiting for wallet to sync after setting sUSDTokenType..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+
+        case "14": {
+          await stateraApi.liquidatePosition(
+            await rli.question(
+              "Enter ID of collateral position you want to liquidate: "
+            ),
+            providers
+          )
+          
+          logger.info("Liquidating collateral...");
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after liquidating collateral..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
         }
         default:
           logger.error(`Invalid choice: ${choice}`);
@@ -419,6 +531,134 @@ export const isAnotherChain = async (
     );
     return false;
   }
+};
+
+export const waitForTokenBalance = (
+  wallet: Wallet,
+  tokenType: string,
+  minimumAmount: bigint,
+  logger: Logger,
+  timeoutMs: number = 30000
+): Promise<bigint> =>
+  Rx.firstValueFrom(
+    wallet.state().pipe(
+      Rx.throttleTime(2_000),
+      Rx.tap((state) => {
+        const balance = state.balances[tokenType] ?? 0n;
+        const applyGap = state.syncProgress?.lag.applyGap ?? 0n;
+        const sourceGap = state.syncProgress?.lag.sourceGap ?? 0n;
+        logger.info(
+          `Waiting for ${tokenType} balance. Current: ${balance}, Target: ${minimumAmount}, Backend lag: ${sourceGap}, Wallet lag: ${applyGap}`
+        );
+      }),
+      Rx.filter((state) => {
+        const balance = state.balances[tokenType] ?? 0n;
+        return state.syncProgress?.synced === true && balance >= minimumAmount;
+      }),
+      Rx.map((state) => state.balances[tokenType] ?? 0n),
+      Rx.timeout(timeoutMs)
+    )
+  );
+
+// Enhanced function to wait for wallet sync after operations
+export const waitForWalletSyncAfterOperation = async (
+  wallet: Wallet,
+  logger: Logger,
+  timeoutMs: number = 30000
+): Promise<void> => {
+  try {
+    await Rx.firstValueFrom(
+      wallet.state().pipe(
+        Rx.throttleTime(1_000),
+        Rx.tap((state) => {
+          const applyGap = state.syncProgress?.lag.applyGap ?? 0n;
+          const sourceGap = state.syncProgress?.lag.sourceGap ?? 0n;
+          logger.info(
+            `Syncing after operation. Backend lag: ${sourceGap}, Wallet lag: ${applyGap}`
+          );
+        }),
+        Rx.filter((state) => {
+          return state.syncProgress?.synced === true;
+        }),
+        Rx.timeout(timeoutMs)
+      )
+    );
+    logger.info("Wallet sync completed after operation");
+  } catch (error) {
+    logger.warn(`Wallet sync timeout after ${timeoutMs}ms`);
+  }
+};
+
+// Function to display comprehensive wallet state including all token types
+const displayComprehensiveWalletState = async (
+  wallet: Wallet,
+  currentContractState: DerivedStateraContractState | undefined,
+  logger: Logger
+): Promise<void> => {
+  const state = await Rx.firstValueFrom(wallet.state());
+
+  logger.info("=== WALLET STATE ===");
+  logger.info(`Address: ${state.address}`);
+  logger.info(
+    `Sync Status: ${state.syncProgress?.synced ? "SYNCED" : "SYNCING"}`
+  );
+
+  if (state.syncProgress) {
+    logger.info(`Apply Gap: ${state.syncProgress.lag.applyGap}`);
+    logger.info(`Source Gap: ${state.syncProgress.lag.sourceGap}`);
+  }
+
+  logger.info("=== TOKEN BALANCES ===");
+  Object.entries(state.balances).forEach(([tokenType, balance]) => {
+    if (tokenType === nativeToken()) {
+      logger.info(`Native Token (tDUST): ${balance}`);
+    } else if (
+      currentContractState &&
+      tokenType === utils.uint8arraytostring(currentContractState.sUSDTokenType)
+    ) {
+      logger.info(`Stablecoin (sUSD): ${balance}`);
+    } else {
+      logger.info(`Token ${tokenType}: ${balance}`);
+    }
+  });
+
+  logger.info(`Transaction History Count: ${state.transactionHistory.length}`);
+  logger.info("===================");
+};
+
+export const buildEnhancedWalletAndWaitForFunds = async (
+  config: Config,
+  seed: string,
+  filename: string,
+  logger: Logger
+): Promise<Wallet & Resource> => {
+  // ... (keep existing wallet building logic)
+  const wallet = await buildWalletAndWaitForFunds(
+    config,
+    seed,
+    filename,
+    logger
+  );
+
+  // Set up continuous state monitoring
+  const stateSubscription = wallet
+    .state()
+    .pipe(Rx.throttleTime(60_000))
+    .subscribe({
+      next: (state) => {
+        logger.info("Wallet state changed - balances updated");
+        Object.entries(state.balances).forEach(([tokenType, balance]) => {
+          if (balance > 0n) {
+            logger.info(`${tokenType}: ${balance}`);
+          }
+        });
+      },
+    });
+
+  // Store subscription reference for cleanup
+  (wallet as any).__stateSubscription = stateSubscription;
+
+  return wallet;
 };
 
 export const buildWalletAndWaitForFunds = async (
@@ -572,7 +812,12 @@ export const buildFreshWallet = async (
   config: Config,
   logger: Logger
 ): Promise<Wallet & Resource> =>
-  await buildWalletAndWaitForFunds(config, toHex(randomBytes(32)), "", logger);
+  await buildWalletAndWaitForFunds(
+    config,
+    toHex(randomBytes(32)),
+    "",
+    logger
+  );
 
 // Prompt for a seed and create the wallet with that.
 const buildWalletFromSeed = async (
@@ -687,7 +932,7 @@ export const run = async (
         walletProvider: walletAndMidnightProvider,
         midnightProvider: walletAndMidnightProvider,
       };
-      await circuit_main_loop(providers, rli, logger);
+      await circuit_main_loop(wallet, providers, rli, logger);
     }
   } catch (e) {
     if (e instanceof Error) {

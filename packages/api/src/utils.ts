@@ -1,7 +1,7 @@
 import { Depositor, Staker } from "@statera/ada-statera-protocol";
 import { Logger } from "pino";
 import {parse as uuidParser} from "uuid"
-import { DerivedDepositor, DerivedStaker } from "./common-types.js";
+import { DerivedDepositor, DerivedReservedPoolTotal, DerivedStaker } from "./common-types.js";
 export const randomNonceBytes = (length: number, logger?: Logger): Uint8Array => {
     const newBytes = new Uint8Array(length);
     crypto.getRandomValues(newBytes);
@@ -10,8 +10,8 @@ export const randomNonceBytes = (length: number, logger?: Logger): Uint8Array =>
 }
 
 export function uint8arraytostring<T extends Uint8Array | Uint16Array | Uint32Array | Uint8ClampedArray>(array: T) {
-    const deocodedText = new TextDecoder().decode(array);
-    return deocodedText.toString()
+    const deocodedText = new TextDecoder("utf-8").decode(array);
+    return deocodedText
 }
 
 export function hexStringToUint8Array(hexStr: string) {
@@ -31,6 +31,30 @@ export function createDerivedDepositorsArray(collateralDepositors: {
   return Array.from(collateralDepositors).map(([key, depositor]) => ({
     id: uint8arraytostring(key),
     depositor: depositor,
+  }));
+}
+
+
+export function createDeriveReservePoolArray(reservePoolTotal: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array): boolean;
+    lookup(key_0: Uint8Array): {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    };
+    [Symbol.iterator](): Iterator<[Uint8Array, {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    }]>;
+}): DerivedReservedPoolTotal[] {
+  return Array.from(reservePoolTotal).map(([key, reserve]) => ({
+    id: uint8arraytostring(key),
+    pool_balance: reserve,
   }));
 }
 

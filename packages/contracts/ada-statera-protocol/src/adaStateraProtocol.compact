@@ -18,13 +18,11 @@ export ledger MCR: Uint<8>; //MCR --> Minimum Collateral Ratio (expressed in per
 /* Mapping to keep track of sUSD coin input into the stakePool */
 export ledger stakePoolTotal: QualifiedCoinInfo;
 
-/* Mapping to keep track of amount of liquidated collateral just as stored value not as coin stored on the ledger */
-export ledger totalLiquidatedColateral: Map<Bytes<32>, Uint<32>>;
 /* 
- * @reservePoolTotal --> Maps coin_color -> QualifiedCoinInfo 
- * Keeps track of dynamic collateral coin type input into the contract
+ * @reservePoolTotal --> QualifiedCoinInfo 
+ * Keeps track of valid collateral coin type input into the contract
 */
-export ledger reservePoolTotal: Map<Bytes<32>, QualifiedCoinInfo>;
+export ledger reservePoolTotal: QualifiedCoinInfo;
 export ledger nonce: Bytes<32>;
 export ledger sUSDTokenType: Bytes<32>;
 
@@ -35,7 +33,7 @@ export ledger depositors: Map<Bytes<32>, Depositor>;
 /* Mapping for stakers --> addrs -> Staker */
 export ledger stakers: Map<Bytes<32>, Staker>;
 export ledger cumulative_scaling_factor: Uint<2>;
-export ledger validCollateralAssetType: Set<Bytes<32>>;
+export ledger validCollateralAssetType: Bytes<32>;
 ledger percentageDivisor: Uint<64>;
 
 /* Liquation monitoring variable
@@ -73,7 +71,8 @@ constructor(
     intialNonce: Bytes<32>,
     initLiquidationThreshold: Uint<8>,
     initialLVT: Uint<8>,
-    initialMCR: Uint<8>
+    initialMCR: Uint<8>,
+    _validCollateralAssetType: Bytes<32>
     ) {
         admin = ownPublicKey();
         totalMint = 0;
@@ -81,10 +80,10 @@ constructor(
         liquidationThreshold = disclose(initLiquidationThreshold);
         nonce = disclose(intialNonce);
         LVT = disclose(initialLVT);
-        stateraContractAddrs = kernel.self().bytes;
         percentageDivisor = 100;
         cumulative_scaling_factor = 1;
         MCR = disclose(initialMCR);
+        validCollateralAssetType = disclose(_validCollateralAssetType);
 }
 
 
@@ -108,12 +107,7 @@ export circuit setSUSDTokenType(): []{
 
     sUSDTokenType = tokenType(pad(32, "sUSD_token"), kernel.self());
 }
-/* Adds new collateral type so users can deposit */
-export circuit setValidColla1teralType(coinType: Bytes<32>, remove: Maybe<Boolean>): []{
-    assert (!validCollateralAssetType.member(coinType), "Coin type specified is already a valid token");
 
-    remove.is_some && remove ? validCollateralAssetType.remove(disclose(coinType)) : validCollateralAssetType.insert(disclose(coinType));
-}
 
 /* INTERACTIONS FOR COLLATERAL DEPOSITORS */
 
@@ -134,11 +128,11 @@ export circuit depositToCollateralPool( coin: CoinInfo, _depositId: Bytes<32>): 
 
 
     /* Writes coin to collateral reserve pool total */
-    const coinToInsert = (!depositors.isEmpty() && reservePoolTotal.member(disclosedCoinColor))
-    ? mergeCoinImmediate(reservePoolTotal.lookup(disclosedCoinColor), disclosedCoin)
-    : disclose(coin);
+    const coinToInsert = !depositors.isEmpty() ? 
+    mergeCoinImmediate(reservePoolTotal, disclosedCoin) : 
+    disclose(coin);
     
-    reservePoolTotal.insertCoin(disclosedCoinColor, coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    reservePoolTotal.writeCoin(coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
 
     const depositorsId = generateUserId(disclose(secrete_key()));
     const borrowLimit = DivisionFunction((LVT * metadata.collateral) as Uint<64>, percentageDivisor) as Uint<32>;
@@ -227,14 +221,12 @@ export circuit withdrawCollateral(_depositId: Bytes<32>, _amountToWithdraw: Uint
    assert (_amountToWithdraw <= withdrawableCollateral, "Can not withdraw more than available collateral deposited");
    const balance = metadata.collateral - disclosedAmtToWithdraw;
    // Sends the collateral amount to the callers publickey if the metadata hashs equal
-   const reserveBalToSendFrom = reservePoolTotal.lookup(depositPositionToWthdraw.coinType);
-   const sendResult = send(reserveBalToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmtToWithdraw);
+   const sendResult = send(reservePoolTotal, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmtToWithdraw);
 
     // Updates reservePoolTotal
     if(sendResult.change.is_some){
         // Updates the reservePoolTotal with the change from the send transaction
-        reservePoolTotal.insertCoin(
-            depositPositionToWthdraw.coinType,
+        reservePoolTotal.writeCoin(
             sendResult.change.value, 
             right<ZswapCoinPublicKey, ContractAddress>(kernel.self())
         );
@@ -351,12 +343,12 @@ export circuit depositToStabilityPool(coin: CoinInfo): [] {
         stakeAmount: disclose(coin.value),
         entry_ADA_SUSD_index: ADA_sUSD_index,
         entry_scale_factor: cumulative_scaling_factor,
-        effective_user_balance: disclose(coin.value)
+        effective_user_balance: disclose(coin.value) as Uint<32>
     });
 }
 
 
-export circuit checkStakeReward(coinType: Bytes<32>): [Uint<128>, Staker]{
+export circuit checkStakeReward(): [Uint<128>, Staker]{
     assert (stakers.member(ownPublicKey().bytes), "Can not check stake reward: You have no stake position");
     
     const stakePosition = stakers.lookup(ownPublicKey().bytes);
@@ -364,10 +356,8 @@ export circuit checkStakeReward(coinType: Bytes<32>): [Uint<128>, Staker]{
     const stakersId = generateUserId(disclose(secrete_key()));
     assert (stakersId == stakePosition.id, "You are not a staker: Invalid staker ID");
 
-    const liquidatedCollateral = totalLiquidatedColateral.lookup(coinType);
-    
     // Computes the user stake reward i.e earned_ADA = user_sUSD × (total_ADA_per_sUSD − user_entry_ADA_per_sUSD) + pending_balance
-    const stakeReward = (((stakePosition.stakeAmount as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<128>;
+    const stakeReward = (((stakePosition.stakeAmount as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<64>;
     // Calculates user's new effective stake balance using userstakeAmount * (cumulative_scaling_factor / user_entry_scale_factor) 
     const new_user_effective_bal = (stakePosition.stakeAmount as Field) * DivisionFunction(cumulative_scaling_factor as Uint<64>, stakePosition.entry_scale_factor);
     // Updates the user's pending ADA upon interaction to avoid looping to update individually
@@ -390,22 +380,21 @@ export circuit withdrawStakeReward(_amount: Uint<64>):[]{
     assert (stakeReward >= _amount, "Withdraw amount can not be more than availbale stake reward");
 
     // Sends the pending ADA to the staker
-    const depositPositionToSendFrom = reservePoolTotal.lookup(nativeToken());
-    const sendResult = send(depositPositionToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclose(_amount));
+    const sendResult = send(reservePoolTotal, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclose(_amount));
 
     if(sendResult.change.is_some){
-        stakePoolTotal.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+        reservePoolTotal.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }else{
       // Reset Pool total if there's no change left
-      stakePoolTotal.resetToDefault();
+      reservePoolTotal.resetToDefault();
     }
     
     // Updates the user's pending ADA upon interaction to avoid looping to update individually
     const stakeRewardBalance = stakeReward - disclose(_amount);
     const updatedStakePosition = Staker {
         ...updatedStakersPosition,
-        stake_reward: stakeRewardBalance,
-        entry_ADA_SUSD_index: ADA_sUSD_index
+        stake_reward: stakeRewardBalance as Uint<64>,
+        entry_ADA_SUSD_index: ADA_sUSD_index,
     };
 
     stakers.insert(ownPublicKey().bytes, updatedStakePosition);
@@ -439,13 +428,7 @@ export circuit liquidateDebtPosition(
     // Calculates and update the cumulative scaling factor
     const loss_ratio = DivisionFunction(disclose(_debt), stakePoolTotal.value as Uint<64>);
     cumulative_scaling_factor = cumulative_scaling_factor * (1 - loss_ratio);
-    // Updated total liquidated collateral list
-    if(totalLiquidatedColateral.member(collateralDepositToLiquidate.coinType)){
-        const newTotal = (totalLiquidatedColateral.lookup(collateralDepositToLiquidate.coinType) + _collateralAmt) as Uint<32>;
-        totalLiquidatedColateral.insert(collateralDepositToLiquidate.coinType, newTotal);
-    }else{
-        totalLiquidatedColateral.insert(collateralDepositToLiquidate.coinType, _collateralAmt);
-    }
+    
     // Sets user's private state
     set_mint_metadata(disclose(_depositId), MintMetadata {
         collateral: 0,
