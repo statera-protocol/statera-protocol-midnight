@@ -114,9 +114,7 @@ export class StateraAPI implements DeployedStateraAPI {
           nonce: ledgerState.nonce,
           sUSDTokenType: ledgerState.sUSDTokenType,
           stakePoolTotal: ledgerState.stakePoolTotal.value,
-          reservePoolTotal: utils.createDeriveReservePoolArray(
-            ledgerState.reservePoolTotal
-          ),
+          reservePoolTotal: ledgerState.reservePoolTotal,
           liquidationThreshold: ledgerState.liquidationThreshold,
           collateralDepositors: utils.createDerivedDepositorsArray(
             ledgerState.depositors
@@ -126,9 +124,6 @@ export class StateraAPI implements DeployedStateraAPI {
           mintMetadata: privateState?.depositPositions,
           secrete_key: privateState?.secrete_key,
           division: privateState,
-          stateraContractAddress: utils.uint8arraytostring(
-            ledgerState.stateraContractAddrs
-          ),
         };
       }
     );
@@ -148,7 +143,7 @@ export class StateraAPI implements DeployedStateraAPI {
       contract: StateraContractInstance,
       initialPrivateState: await StateraAPI.getPrivateState(providers),
       privateStateId: stateraPrivateStateId,
-      args: [utils.randomNonceBytes(32, logger), 90n, 80n, 120n],
+      args: [utils.randomNonceBytes(32, logger), 90n, 80n, 120n, encodeTokenType(nativeToken())],
     });
 
     logger?.trace("Deployment successfull", {

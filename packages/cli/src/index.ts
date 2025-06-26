@@ -133,7 +133,7 @@ const displayLedgerState = async (
     logger.info(`Current stablecoin color is: ${ledgerState.sUSDTokenType}`);
     logger.info(`Current stakers is: ${ledgerState.stakers}`);
     logger.info(
-      `Current no of depositors is: ${ledgerState.reservePoolTotal.size()}`
+      `Current no of depositors is: ${ledgerState.reservePoolTotal.value}`
     );
     logger.info(
       `Current liquidation threshold is: ${ledgerState.liquidationThreshold}`
@@ -148,9 +148,8 @@ const displayDerivedLedgerState = async (
   logger.info(`Current admin is: ${currentState.admin}`);
   console.log(
     `Current collateral pool amount is:`,
-    currentState.reservePoolTotal
+    currentState.reservePoolTotal.value
   );
-  console.log(`Current contract address:`, currentState.stateraContractAddress);
   console.log(`Current total value minted is:`, currentState.totalMint);
   console.log(`Current nonce is:`, currentState.nonce);
   console.log(`Current depositor is:`, currentState.collateralDepositors);

@@ -7,6 +7,7 @@ import {
 } from "@statera/ada-statera-protocol";
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
+import { QualifiedCoinInfo } from "@midnight-ntwrk/ledger";
 
 export const contractAddress =
   "02002355b40f3a15136ed0eed0a977ae859d1c94f2d6975f1a8294ebed2525d4d2ff";
@@ -33,12 +34,16 @@ export type DerivedStateraContractState = {
   readonly nonce: Uint8Array;
   readonly sUSDTokenType: Uint8Array;
   readonly stakePoolTotal: bigint;
-  readonly reservePoolTotal: DerivedReservedPoolTotal[];
+  readonly reservePoolTotal: {
+    nonce: Uint8Array;
+    color: Uint8Array;
+    value: bigint;
+    mt_index: bigint;
+  };
   readonly liquidationThreshold: bigint;
   readonly collateralDepositors: DerivedDepositor[];
   readonly stakers: DerivedStaker[];
   readonly noOfDepositors: bigint;
-  readonly stateraContractAddress: string;
 };
 
 export type DerivedDepositor = {
