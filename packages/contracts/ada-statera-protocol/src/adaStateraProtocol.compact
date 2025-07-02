@@ -55,7 +55,6 @@ export struct Depositor {
 export struct Staker {
     id: Bytes<32>;
     address: ZswapCoinPublicKey;
-    stakeAmount: Uint<128>;
     entry_ADA_SUSD_index: Uint<128>;
     effective_user_balance: Uint<32>;
     stake_reward: Uint<64>;
@@ -112,20 +111,18 @@ export circuit setSUSDTokenType(): []{
 /* INTERACTIONS FOR COLLATERAL DEPOSITORS */
 
 export circuit depositToCollateralPool( coin: CoinInfo, _depositId: Bytes<32>): [] {
-    assert (!depositors.member(disclose(_depositId)),  "Deposit with same ID already exist");
+    assert (coin.color == validCollateralAssetType, "Invalid token type provided: Can not create collateral position");
     
     const disclosedCoin = disclose(coin);
+    const disclosedDepositId = disclose(_depositId);
     const disclosedCoinColor = disclose(coin.color);
     
     /* Hash metadata for shielding */
     const metadata = getMintMetadata(disclose(_depositId));
-    /* Checks to see if the amount of coin been deposited equals the worth of collateral stored privately */
-    assert (coin.value >= metadata.collateral, "Insufficient token amount provided");
     const metadataHash = hashMintMetadata(metadata, disclose(_depositId));
 
     /* Receives coin */
     receive(disclosedCoin);
-
 
     /* Writes coin to collateral reserve pool total */
     const coinToInsert = !depositors.isEmpty() ? 
@@ -137,14 +134,26 @@ export circuit depositToCollateralPool( coin: CoinInfo, _depositId: Bytes<32>): 
     const depositorsId = generateUserId(disclose(secrete_key()));
     const borrowLimit = DivisionFunction((LVT * metadata.collateral) as Uint<64>, percentageDivisor) as Uint<32>;
 
-    depositors.insert(disclose(_depositId), Depositor{
+    if(depositors.member(disclosedDepositId)){
+        const currenDepositPosition = depositors.lookup(disclosedDepositId);
+
+        depositors.insert(disclosedDepositId, Depositor{
+            ...currenDepositPosition,
+            borrowLimit: borrowLimit,
+            metadataHash: metadataHash
+        });
+    }else{
+        depositors.insert(disclose(_depositId), Depositor{
         ...default<Depositor>,
         id: depositorsId,
         metadataHash: metadataHash,
         coinType: disclose(coin.color),
         borrowLimit: borrowLimit
     });
+    }
 }
+
+
 
 
 export circuit mint_sUSD( mint_amount: Uint<64>, _depositId: Bytes<32>): []{
@@ -164,25 +173,29 @@ export circuit mint_sUSD( mint_amount: Uint<64>, _depositId: Bytes<32>): []{
     const mintMetadata = getMintMetadata(disclosedDepositId);
     const mintMetadataHash = hashMintMetadata(mintMetadata, disclosedDepositId);
     assert (mintMetadataHash == depositPositionToMint.metadataHash, "Invalid private state provided");
+    const debtMinted = mintMetadata.debt > 0 ? (mintMetadata.debt + disclosedMintAmount) as Uint<64> : disclosedMintAmount;
     // Calculates hFactor for the loan
-    const healthFactor = calculateHFactor(mintMetadata.collateral, mint_amount, liquidationThreshold);
+    const healthFactor = calculateHFactor(mintMetadata.collateral, debtMinted, liquidationThreshold);
     assert (healthFactor >= 1, "Cannot mint sUSD for this collateral position: health factor is low");
     const newNonce = evolveNonce(mintCounter, nonce);
     mintToken(pad(32, "sUSD_token"), disclosedMintAmount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
     // Reconstructs and update metadataHash with new mint amount
     const newMintMetadata = MintMetadata{
         ...mintMetadata,
-        debt: disclosedMintAmount
+        debt: (mintMetadata.debt + disclosedMintAmount) as Uint<64>
     };
+
     // Set mint_metadata private state
     set_mint_metadata(disclosedDepositId, newMintMetadata);
     const newMetadataHash = hashMintMetadata(newMintMetadata, disclosedDepositId);
+    const newBorrowLimit = newMintMetadata.debt <= depositPositionToMint.borrowLimit ? (depositPositionToMint.borrowLimit - newMintMetadata.debt) : 0;
     //Updates the depositor list    
     depositors.insert(disclosedDepositId, Depositor{
         ...depositPositionToMint,
         position: DebtPositionStatus.active,
         metadataHash: newMetadataHash,
-        hFactor: healthFactor as Uint<4> // Set to 1 just for testing
+        hFactor: healthFactor as Uint<4>,
+        borrowLimit: newBorrowLimit
     });
 
     // Updates ledger states for the next mint
@@ -242,18 +255,20 @@ export circuit withdrawCollateral(_depositId: Bytes<32>, _amountToWithdraw: Uint
    const newMetadataHash = hashMintMetadata(newMetadata, disclosedDepositId);
    // Sets mint_metadata private state
    set_mint_metadata(disclosedDepositId, newMetadata);
-
+   const newBorrowLimit = DivisionFunction((LVT * balance) as Uint<64>, percentageDivisor) as Uint<32>;
    // Updates the ledger state
    if(depositPositionToWthdraw.position == DebtPositionStatus.inactive){
         depositors.insert(disclosedDepositId, Depositor{
         ...depositPositionToWthdraw,
         position: DebtPositionStatus.closed,
-        metadataHash: newMetadataHash
+        metadataHash: newMetadataHash,
+        borrowLimit: newBorrowLimit
         });
    }else{
         depositors.insert(disclosedDepositId, Depositor{
             ...depositPositionToWthdraw,
-            metadataHash: newMetadataHash 
+            metadataHash: newMetadataHash,
+            borrowLimit: newBorrowLimit
         });
    }
 }
@@ -297,16 +312,20 @@ export circuit repay( coin: CoinInfo, _depositId: Bytes<32>, _amountToRepay: Uin
    // Set mint_metadata private state
    set_mint_metadata(disclosedDepositId, newMetadata);
 
+   const newHFactor = calculateHFactor(metadata.collateral, newMetadata.debt, liquidationThreshold);
+   const borrowLimit = mintPositionToRepay.borrowLimit + disclosedAmtToRepay;
    if (balanceToRepay > 0) {
         depositors.insert(disclosedDepositId, Depositor{
             ...mintPositionToRepay,
-            metadataHash: newMetadataHash
+            metadataHash: newMetadataHash,
+            hFactor: newHFactor as Uint<4>
         });
     }else{
         depositors.insert(disclosedDepositId, Depositor {
             ...mintPositionToRepay,
             metadataHash: newMetadataHash,
-            position: DebtPositionStatus.closed
+            position: DebtPositionStatus.closed,
+            hFactor: newHFactor as Uint<4>
         });
     }
 }
@@ -319,7 +338,6 @@ export circuit repay( coin: CoinInfo, _depositId: Bytes<32>, _amountToRepay: Uin
 
 export circuit depositToStabilityPool(coin: CoinInfo): [] {
     const disclosedCoin = disclose(coin);
-    assert (!stakers.member(ownPublicKey().bytes), "Stake with same ID already exist");
     assert (coin.color == sUSDTokenType, "Invalid coin type provided to pool");
 
     // Receives and write to coin balance
@@ -336,14 +354,20 @@ export circuit depositToStabilityPool(coin: CoinInfo): [] {
     // Updates statbility pool mapping
     const stakersId = generateUserId(disclose(secrete_key()));
     // Inserts the new stake detail with the user's adddress as key
+    stakers.member(ownPublicKey().bytes) ? 
+    stakers.insert(ownPublicKey().bytes, Staker{
+        ...stakers.lookup(ownPublicKey().bytes),
+        effective_user_balance: (stakers.lookup(ownPublicKey().bytes).effective_user_balance + disclosedCoin.value) as Uint<32>,
+        entry_ADA_SUSD_index: ADA_sUSD_index,
+        entry_scale_factor: cumulative_scaling_factor,
+    }) :
     stakers.insert(ownPublicKey().bytes, Staker {
         ...default<Staker>,
         id: stakersId,
         address: ownPublicKey(),
-        stakeAmount: disclose(coin.value),
         entry_ADA_SUSD_index: ADA_sUSD_index,
         entry_scale_factor: cumulative_scaling_factor,
-        effective_user_balance: disclose(coin.value) as Uint<32>
+        effective_user_balance: disclosedCoin.value as Uint<32>
     });
 }
 
@@ -357,9 +381,9 @@ export circuit checkStakeReward(): [Uint<128>, Staker]{
     assert (stakersId == stakePosition.id, "You are not a staker: Invalid staker ID");
 
     // Computes the user stake reward i.e earned_ADA = user_sUSD × (total_ADA_per_sUSD − user_entry_ADA_per_sUSD) + pending_balance
-    const stakeReward = (((stakePosition.stakeAmount as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<64>;
+    const stakeReward = (((stakePosition.effective_user_balance as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<64>;
     // Calculates user's new effective stake balance using userstakeAmount * (cumulative_scaling_factor / user_entry_scale_factor) 
-    const new_user_effective_bal = (stakePosition.stakeAmount as Field) * DivisionFunction(cumulative_scaling_factor as Uint<64>, stakePosition.entry_scale_factor);
+    const new_user_effective_bal = (stakePosition.effective_user_balance as Field) * DivisionFunction(cumulative_scaling_factor as Uint<64>, stakePosition.entry_scale_factor);
     // Updates the user's pending ADA upon interaction to avoid looping to update individually
     const updatedStakersPosition = Staker {
         ...stakePosition,
@@ -378,7 +402,7 @@ export circuit withdrawStakeReward(_amount: Uint<64>):[]{
     // Checks if the amount to withdraw is not more than the withdrawableStakeReward
     assert (disclose(_amount) <= stakeReward, "Can not withdraw more than available stake reward");
     assert (stakeReward >= _amount, "Withdraw amount can not be more than availbale stake reward");
-
+    
     // Sends the pending ADA to the staker
     const sendResult = send(reservePoolTotal, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclose(_amount));
 
@@ -395,6 +419,31 @@ export circuit withdrawStakeReward(_amount: Uint<64>):[]{
         ...updatedStakersPosition,
         stake_reward: stakeRewardBalance as Uint<64>,
         entry_ADA_SUSD_index: ADA_sUSD_index,
+    };
+
+    stakers.insert(ownPublicKey().bytes, updatedStakePosition);
+}
+
+/* Permits user to withdraw all or part of their stake reward from the stakePool */
+export circuit withdrawStake(_amount: Uint<32>): []{
+    const disclosedAmount = disclose(_amount);
+    assert (stakers.member(ownPublicKey().bytes), "Can not withdraw stake: You are not a staker");
+
+    const stakePosition = stakers.lookup(ownPublicKey().bytes);
+
+    assert (_amount <= stakePosition.effective_user_balance, "Can not withdraw more than available stake balance");
+    const stakersId = generateUserId(disclose(secrete_key()));
+    assert (stakersId == stakePosition.id, "Cannot withdraw stake reward you are not the owner");
+    const sendResult = send(stakePoolTotal, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmount);
+    const balance = stakePosition.effective_user_balance - disclosedAmount;
+
+    sendResult.change.is_some ? 
+    stakePoolTotal.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self())) :
+    stakePoolTotal.resetToDefault();
+
+    const updatedStakePosition = Staker {
+        ...stakePosition,
+        effective_user_balance: balance as Uint<32>
     };
 
     stakers.insert(ownPublicKey().bytes, updatedStakePosition);

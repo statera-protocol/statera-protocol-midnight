@@ -50,6 +50,7 @@ export interface DeployedStateraAPI {
     stakeId: string
   ) => void;
   withdrawStakeReward: (amountToWithdraw: number) => void;
+  withdrawStake: (amount: number) => void;
   mint_sUSD: (mint_amount: number, collateralId: string) => void;
   repay: (
     amount: number,
@@ -143,7 +144,13 @@ export class StateraAPI implements DeployedStateraAPI {
       contract: StateraContractInstance,
       initialPrivateState: await StateraAPI.getPrivateState(providers),
       privateStateId: stateraPrivateStateId,
-      args: [utils.randomNonceBytes(32, logger), 90n, 80n, 120n, encodeTokenType(nativeToken())],
+      args: [
+        utils.randomNonceBytes(32, logger),
+        90n,
+        80n,
+        120n,
+        encodeTokenType(nativeToken()),
+      ],
     });
 
     logger?.trace("Deployment successfull", {
@@ -216,19 +223,57 @@ export class StateraAPI implements DeployedStateraAPI {
     const currentPrivaState = await providers.privateStateProvider.get(
       stateraPrivateStateId
     );
-    const newPrivateState = currentPrivaState && {
-      ...currentPrivaState,
-      depositPositions: [
-        ...currentPrivaState?.depositPositions,
-        {
-          depositId: utils.hexStringToUint8Array(collateralId),
-          mint_metadata: {
-            collateral: BigInt(amount),
-            debt: BigInt(0),
+
+    let newPrivateState: StateraPrivateState | null;
+    
+    const existingDepositiPosition =
+      currentPrivaState &&
+      currentPrivaState?.depositPositions.find((state) =>
+        arraysEqual(utils.hexStringToUint8Array(collateralId), state.depositId)
+      );
+
+    if (existingDepositiPosition) {
+       newPrivateState = {
+        ...currentPrivaState,
+        depositPositions: currentPrivaState.depositPositions.map((state) => {
+          if (
+            arraysEqual(
+              state.depositId,
+              utils.hexStringToUint8Array(collateralId)
+            )
+          ) {
+            const newMintMetadata = {
+              ...state,
+              mint_metadata: {
+                ...state.mint_metadata,
+                collateral: state.mint_metadata.collateral + BigInt(amount),
+              },
+            };
+
+            return newMintMetadata;
+          }
+
+          return state;
+        }),
+      };
+    }else{
+      newPrivateState = currentPrivaState && {
+        ...currentPrivaState,
+        depositPositions: [
+          ...currentPrivaState?.depositPositions,
+          {
+            depositId: utils.hexStringToUint8Array(collateralId),
+            mint_metadata: {
+              collateral: BigInt(amount),
+              debt: BigInt(0),
+            },
           },
-        },
-      ],
-    };
+        ],
+      };
+
+    }
+
+
     await StateraAPI.setPrivateState(
       providers,
       newPrivateState as StateraPrivateState
@@ -275,7 +320,8 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   async setSUSDTokenType() {
-    const txData = await this.allReadyDeployedContract.callTx.setSUSDTokenType();
+    const txData =
+      await this.allReadyDeployedContract.callTx.setSUSDTokenType();
 
     this.logger?.trace({
       transactionAdded: {
@@ -290,7 +336,11 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   // Repay debtAsset
-  async withdrawCollateral(amountToWithdraw: number, _collateralId: string, _oraclePrice: number) {
+  async withdrawCollateral(
+    amountToWithdraw: number,
+    _collateralId: string,
+    _oraclePrice: number
+  ) {
     this.logger?.info("Withdrawing collateral asset...");
     // Construct tx with dynamic coin data
     const txData =
@@ -395,6 +445,28 @@ export class StateraAPI implements DeployedStateraAPI {
     });
   }
 
+  async withdrawStake(amount: number) {
+    this.logger?.info(
+      `Withdrawing ${amount} from your effective stake pool balance...`
+    );
+    // Construct tx with dynamic coin data
+    const txData =
+      await this.allReadyDeployedContract.callTx.withdrawStake(
+        BigInt(amount)
+      );
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "withdrawStake",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+  }
+
   async liquidatePosition(
     collateralId: string,
     providers: StateraContractProviders
@@ -414,7 +486,7 @@ export class StateraAPI implements DeployedStateraAPI {
       await this.allReadyDeployedContract.callTx.liquidateDebtPosition(
         privateStateToLiquidate?.mint_metadata.collateral as bigint,
         utils.hexStringToUint8Array(collateralId),
-        privateStateToLiquidate?.mint_metadata.debt as bigint,
+        privateStateToLiquidate?.mint_metadata.debt as bigint
       );
 
     this.logger?.trace({

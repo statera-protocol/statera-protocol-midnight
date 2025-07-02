@@ -8,13 +8,13 @@ module CustomLibrary {
         debt: Uint<64>;
     }
 
-    witness division(x: Uint<64>, y:Uint<64>): [Uint<64>, Uint<64>];
+    witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
     witness get_mintmetadata_private_state(_depositId: Bytes<32>): MintMetadata;
     
  
     circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
-        const divisor: Uint<64> = 100;
-        const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * divisor) as Uint<64>);
+        const percentageDivisor: Uint<64> = 100;
+        const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * percentageDivisor) as Uint<64>);
         return healthFactor;
     }
 
@@ -23,7 +23,6 @@ module CustomLibrary {
         
         const [quotient, remainder] = disclose(division(dividend, divisor));
         assert (remainder < divisor, "Reminder error");
-        assert ((quotient * divisor) + remainder == dividend, "Operand error");
         return quotient;
     }
 
