@@ -17,8 +17,8 @@
     "lint": "eslint src"
   },
   "dependencies": {
-    "@stater/statera-api": "workspace:*",
     "@statera/ada-statera-protocol": "workspace:*",
+    "@statera/statera-api": "workspace:*",
     "pino": "^8.16.1",
     "ws": "^8.14.2"
   },

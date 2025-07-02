@@ -9,7 +9,7 @@ import {
   StateraContractProviders,
   stateraPrivateStateId,
   utils,
-} from "@stater/statera-api";
+} from "@statera/statera-api";
 import { ContractAddress } from "@midnight-ntwrk/compact-runtime";
 import { createInterface, Interface } from "node:readline/promises";
 import { Logger } from "pino";
@@ -189,20 +189,21 @@ const displayUserPrivateState = async (
 // Updated menu with new option
 const CIRCUIT_MAIN_LOOP_QUESTION = `
 You can do one of the following:
-  1. Check your stake reward
+  1. Check your stake reward (STAKERS ONLY)
   2. Deposit tDUST into collateral pool
-  3. Deposit sUSD into stake pool
+  3. Deposit sUSD into stake pool (STAKERS ONLY)
   4. Display the current ledger state (known by everyone)
   5. Display the current derived ledger state (known by everyone)
   6. Display the current private state (known by you alone)
-  7. Mint sUSD from your Collateral position
+  7. Mint sUSD from your Collateral positionj
   8. repay sUSD for your Collateral position
-  9. Withdraw stake reward
+  9. Withdraw stake reward (STAKERS ONLY)
   10. Withdraw deposited collateral
   11. Exit
   12. Display comprehensive wallet state (NEW)
   13. Set sUSDTokenTYpe (ADMIN ONLY)
   14. Liquidate collateral position (LIQUIDATOR ONLY)
+  15. Withdraw your stake balance (STAKERS ONLY)
 
 Which would you like to do? `;
 
@@ -412,6 +413,25 @@ const circuit_main_loop = async (
           await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
+
+        case "15": {
+          await stateraApi.withdrawStake(
+            Number(
+              await rli.question(
+                "How much of your stake balance do you want to withdraw:"
+              )
+            )
+          );
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after stake reward withdrawal..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+
         default:
           logger.error(`Invalid choice: ${choice}`);
       }
