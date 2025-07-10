@@ -1,56 +1,69 @@
 import useMidnightWallet from "@/hookes/useMidnightWallet";
-import { StateraAPI, type DeployedStateraAPI } from "@statera/statera-api";
+import {
+  StateraAPI,
+  type DeployedStateraAPI,
+  type DerivedStateraContractState,
+} from "@statera/statera-api";
 import type { Logger } from "pino";
 import {
   createContext,
   useCallback,
-  useContext,
+  useEffect,
   useState,
   type PropsWithChildren,
 } from "react";
+import toast from "react-hot-toast";
 
 export interface DeploymentProvider {
   readonly isJoining: boolean;
   readonly error: string | null;
   readonly hasJoined: boolean;
   readonly stateraApi: DeployedStateraAPI | undefined;
+  readonly contractState: DerivedStateraContractState | undefined;
   onJoinContract: () => Promise<void>;
   clearError: () => void;
 }
 
-export const DeployedContractContext = createContext<DeploymentProvider | null>(null);
+export const DeployedContractContext = createContext<DeploymentProvider | null>(
+  null
+);
 
 interface DeployedContractProviderProps extends PropsWithChildren {
   logger?: Logger;
   contractAddress?: string;
 }
 
-const DeployedContractProvider = ({ 
-  children, 
-  logger, 
-  contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS 
+export const DeployedContractProvider = ({
+  children,
+  logger,
+  contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS,
 }: DeployedContractProviderProps) => {
-  
-  const [stateraApi, setStateraApi] = useState<DeployedStateraAPI | undefined>(undefined);
+  const [stateraApi, setStateraApi] = useState<DeployedStateraAPI | undefined>(
+    undefined
+  );
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [contractState, setContractState] = useState<
+    DerivedStateraContractState | undefined
+  >(undefined);
   const [hasJoined, setHasJoined] = useState<boolean>(false);
 
   // Use the custom hook instead of useContext directly
   const walletContext = useMidnightWallet();
 
-  const onJoinContract = useCallback(async () => {
+  const onJoinContract = async () => {
     // Prevent multiple simultaneous joins
     if (isJoining || hasJoined) return;
-    
+
     // Validate requirements
-    if (!walletContext?.walletState.hasConnected || !walletContext?.walletState.providers) {
+    if (!walletContext?.hasConnected) {
       setError("Wallet must be connected before joining contract");
       return;
     }
 
     if (!contractAddress) {
       setError("Contract address not configured");
+      toast.error(error);
       return;
     }
 
@@ -59,29 +72,42 @@ const DeployedContractProvider = ({
 
     try {
       const deployedAPI = await StateraAPI.joinStateraContract(
-        walletContext.walletState.providers,
+        walletContext,
         contractAddress,
         logger
       );
-      
+
       setStateraApi(deployedAPI);
+      toast.success("Onboarded successfully");
       setHasJoined(true);
       logger?.info("Successfully joined contract", { contractAddress });
-      
     } catch (error) {
-      const errMsg = error instanceof Error 
-        ? error.message 
-        : `Failed to join contract at ${contractAddress}`;
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : `Failed to join contract at ${contractAddress}`;
       setError(errMsg);
-      logger?.error("Failed to join contract", { error: errMsg, contractAddress });
+      toast.error(errMsg);
+      logger?.error("Failed to join contract", {
+        error: errMsg,
+        contractAddress,
+      });
     } finally {
       setIsJoining(false);
     }
-  }, [isJoining, hasJoined, walletContext?.walletState.hasConnected, walletContext?.walletState.providers, contractAddress, logger]);
+  };
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  useEffect(() => {
+    if (!stateraApi) return;
+
+    const stateSubscription = stateraApi.state.subscribe(setContractState);
+
+    return () => stateSubscription.unsubscribe();
+  }, [stateraApi]);
 
   const contextValue: DeploymentProvider = {
     isJoining,
@@ -90,6 +116,7 @@ const DeployedContractProvider = ({
     stateraApi,
     onJoinContract,
     clearError,
+    contractState,
   };
 
   return (
@@ -98,16 +125,3 @@ const DeployedContractProvider = ({
     </DeployedContractContext.Provider>
   );
 };
-
-// Custom hook for consuming the context
-export const useDeployedContract = (): DeploymentProvider => {
-  const context = useContext(DeployedContractContext);
-  
-  if (!context) {
-    throw new Error("useDeployedContract must be used within a DeployedContractProvider");
-  }
-  
-  return context;
-};
-
-export default DeployedContractProvider;

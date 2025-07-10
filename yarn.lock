@@ -2917,7 +2917,7 @@ __metadata:
     react: "npm:^19.1.0"
     react-dom: "npm:^19.1.0"
     react-hot-toast: "npm:^2.5.2"
-    react-router: "npm:^7.6.3"
+    react-router-dom: "npm:^7.6.3"
     shadcn: "npm:^2.7.0"
     stream-browserify: "npm:^3.0.0"
     stream-http: "npm:^3.2.0"
@@ -11885,7 +11885,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router@npm:^7.6.3":
+"react-router-dom@npm:^7.6.3":
+  version: 7.6.3
+  resolution: "react-router-dom@npm:7.6.3"
+  dependencies:
+    react-router: "npm:7.6.3"
+  peerDependencies:
+    react: ">=18"
+    react-dom: ">=18"
+  checksum: 10c0/51ebd9c71255d836a055b87745070c1800733212088fbb1a7031ce16cbf420ad12a4286faebfc7dc62be6931a0eee74f4dc68f05e7d7a63933bc53b5c9c101f6
+  languageName: node
+  linkType: hard
+
+"react-router@npm:7.6.3":
   version: 7.6.3
   resolution: "react-router@npm:7.6.3"
   dependencies:

@@ -33,7 +33,7 @@ export const witnesses = {
   ): [StateraPrivateState, [bigint, bigint]] => {
     if (divisor == 0n) throw "Invaid arithemetic operation";
 
-    const quotient = dividend / divisor;
+    const quotient = BigInt(Math.round(Number(dividend / divisor)));
     const remainder = dividend % divisor;
 
     return [privateState, [quotient, remainder]];

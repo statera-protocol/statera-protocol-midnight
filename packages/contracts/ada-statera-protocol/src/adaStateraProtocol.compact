@@ -9,7 +9,6 @@ enum DebtPositionStatus { inactive, active, closed, liquidated };
 
 export ledger mintCounter: Counter;
 export ledger totalMint: Uint<128>;
-export ledger admin: ZswapCoinPublicKey;
 export ledger liquidationThreshold: Uint<8>;
 export ledger LVT: Uint<8>; // LVT --> Max. percentage of debt a user can take based on collateral deposited
 export ledger MCR: Uint<8>; //MCR --> Minimum Collateral Ratio (expressed in percentage)
@@ -26,6 +25,10 @@ export ledger reservePoolTotal: QualifiedCoinInfo;
 export ledger nonce: Bytes<32>;
 export ledger sUSDTokenType: Bytes<32>;
 
+/* Tracks who the super admin */
+export ledger super_admin: Bytes<32>;
+/* Tracks list of other admins */
+export ledger admins: Set<Bytes<32>>;
 
 /* Mapping for collateral deposit  --> depositId -> Depositor */
 export ledger depositors: Map<Bytes<32>, Depositor>;
@@ -60,6 +63,11 @@ export struct Staker {
     stake_reward: Uint<64>;
     entry_scale_factor: Uint<32>;   
 }
+/* Returns user local secrete key used for private ID generation */
+witness secrete_key(): Bytes<32>;
+
+/* Sets mint-metadata private state using deposit ID after minting, repayment or withdrawal */
+witness set_mint_metadata(depositId: Bytes<32>, metadata: MintMetadata): [];
 
 /*
  * @tokenAddress -> A contract address that is used to generate tokentype for mintable sUSD token
@@ -73,7 +81,7 @@ constructor(
     initialMCR: Uint<8>,
     _validCollateralAssetType: Bytes<32>
     ) {
-        admin = ownPublicKey();
+        super_admin = ownPublicKey().bytes;
         totalMint = 0;
         // Liquidatin rate in percentage set at 80%
         liquidationThreshold = disclose(initLiquidationThreshold);
@@ -86,15 +94,10 @@ constructor(
 }
 
 
-/* Returns user local secrete key used for private ID generation */
-witness secrete_key(): Bytes<32>;
-
-/* Sets mint-metadata private state using deposit ID after minting, repayment or withdrawal */
-witness set_mint_metadata(depositId: Bytes<32>, metadata: MintMetadata): [];
 
 /* INTERACTION FOR ADMIN ONLY*/
 export circuit resetProtocolConfig(_liquidationThreshold: Uint<8>, _LVT: Uint<8>, _MCR: Uint<8>): []{
-    assert (ownPublicKey().bytes == admin.bytes, "Can not reset contract liquidation rates: You're not the owner");
+    assert (ownPublicKey().bytes == super_admin || admins.member(ownPublicKey().bytes), "Can not set SUSD token type: Unauthorized");
 
     liquidationThreshold = disclose(_liquidationThreshold);
     LVT = disclose(_LVT);
@@ -102,11 +105,18 @@ export circuit resetProtocolConfig(_liquidationThreshold: Uint<8>, _LVT: Uint<8>
 }
 
 export circuit setSUSDTokenType(): []{
-    assert (ownPublicKey().bytes == admin.bytes, "Can not reset contract liquidation rates: You're not the owner");
+    assert (ownPublicKey().bytes == super_admin || admins.member(ownPublicKey().bytes), "Can not set SUSD token type: Unauthorized");
 
     sUSDTokenType = tokenType(pad(32, "sUSD_token"), kernel.self());
 }
 
+
+export circuit addAdmin(address: Bytes<32>): []{
+    assert (ownPublicKey().bytes == super_admin, "Can not add new admin: Unauthorized");
+    assert (!admins.member(disclose(address)), "Can not add admin: Already an admin");
+    // Adds the ne admin to the list of authorized admins
+    admins.insert(disclose(address));
+}
 
 /* INTERACTIONS FOR COLLATERAL DEPOSITORS */
 
@@ -188,7 +198,7 @@ export circuit mint_sUSD( mint_amount: Uint<64>, _depositId: Bytes<32>): []{
     // Set mint_metadata private state
     set_mint_metadata(disclosedDepositId, newMintMetadata);
     const newMetadataHash = hashMintMetadata(newMintMetadata, disclosedDepositId);
-    const newBorrowLimit = newMintMetadata.debt <= depositPositionToMint.borrowLimit ? (depositPositionToMint.borrowLimit - newMintMetadata.debt) : 0;
+    const newBorrowLimit = disclosedMintAmount <= depositPositionToMint.borrowLimit ? (depositPositionToMint.borrowLimit - disclosedMintAmount) : 0;
     //Updates the depositor list    
     depositors.insert(disclosedDepositId, Depositor{
         ...depositPositionToMint,
@@ -215,7 +225,7 @@ export circuit withdrawCollateral(_depositId: Bytes<32>, _amountToWithdraw: Uint
    
    // Checks the user is the authorized depositor
    const reconstructedDepositorsId = generateUserId(disclose(secrete_key()));
-   assert (reconstructedDepositorsId == depositPositionToWthdraw.id, "Can not withdrawl collateral: You are not the owner");
+   assert (reconstructedDepositorsId == depositPositionToWthdraw.id, "Can not withdrawal collateral: You are not the owner");
    
    // Confirms the user's debt position status
    // assert (depositPositionToWthdraw.position == DebtPositionStatus.closed || depositPositionToWthdraw.position == DebtPositionStatus.inactive, "Can not withdraw funds from an active or liquidated collateral position"); 
@@ -312,20 +322,23 @@ export circuit repay( coin: CoinInfo, _depositId: Bytes<32>, _amountToRepay: Uin
    // Set mint_metadata private state
    set_mint_metadata(disclosedDepositId, newMetadata);
 
-   const newHFactor = calculateHFactor(metadata.collateral, newMetadata.debt, liquidationThreshold);
+   const newBorrowLimit = (mintPositionToRepay.borrowLimit + disclosedAmtToRepay) as Uint<32>;
+   const newHFactor = newMetadata.debt > 0 ? calculateHFactor(metadata.collateral, newMetadata.debt, liquidationThreshold) : 0;
    const borrowLimit = mintPositionToRepay.borrowLimit + disclosedAmtToRepay;
    if (balanceToRepay > 0) {
         depositors.insert(disclosedDepositId, Depositor{
             ...mintPositionToRepay,
             metadataHash: newMetadataHash,
-            hFactor: newHFactor as Uint<4>
+            hFactor: newHFactor as Uint<4>,
+            borrowLimit: newBorrowLimit
         });
     }else{
         depositors.insert(disclosedDepositId, Depositor {
             ...mintPositionToRepay,
             metadataHash: newMetadataHash,
             position: DebtPositionStatus.closed,
-            hFactor: newHFactor as Uint<4>
+            hFactor: newHFactor as Uint<4>,
+            borrowLimit: newBorrowLimit
         });
     }
 }

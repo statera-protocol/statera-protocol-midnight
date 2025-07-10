@@ -145,7 +145,7 @@ const displayDerivedLedgerState = async (
   currentState: DerivedStateraContractState,
   logger: Logger
 ): Promise<void> => {
-  logger.info(`Current admin is: ${currentState.admin}`);
+  logger.info(`Current admin is: ${utils.uint8arraytostring(currentState.super_admin)}`);
   console.log(
     `Current collateral pool amount is:`,
     currentState.reservePoolTotal.value

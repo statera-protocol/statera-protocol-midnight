@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "start": "http-server --port 0 ./dist",
-    "build": "tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/keys ./dist/keys && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir ./dist/zkir",
+    "build": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/keys ./dist/keys && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir ./dist/zkir",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -38,7 +38,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
-    "react-router": "^7.6.3",
+    "react-router-dom": "^6.17.0",
     "shadcn": "^2.7.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.11",
