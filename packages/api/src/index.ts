@@ -7,9 +7,13 @@ import {
   StateraContractProviders,
   stateraPrivateStateId,
 } from "./common-types.js";
-import { ContractAddress } from "@midnight-ntwrk/compact-runtime";
+import {
+  ContractAddress,
+  persistentHash,
+} from "@midnight-ntwrk/compact-runtime";
 import {
   deployContract,
+  FinalizedCallTxData,
   findDeployedContract,
 } from "@midnight-ntwrk/midnight-js-contracts";
 import {
@@ -19,7 +23,6 @@ import {
   witnesses,
   type CoinInfo,
   createPrivateStateraState,
-  MintMetadata,
   arraysEqual,
 } from "@statera/ada-statera-protocol";
 import { type Logger } from "pino";
@@ -39,30 +42,31 @@ export interface DeployedStateraAPI {
     collateralId: string,
     amount: number,
     providers: StateraContractProviders
-  ) => void;
+  ) => Promise<FinalizedCallTxData<StateraContract, "depositToCollateralPool">>
+;
   liquidatePosition: (
     collateralId: string,
     providers: StateraContractProviders
-  ) => void;
+  ) => Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">>;
   depositToStakePool: (
     amount: number,
     tokenType: string,
     stakeId: string
-  ) => void;
-  withdrawStakeReward: (amountToWithdraw: number) => void;
-  withdrawStake: (amount: number) => void;
-  mint_sUSD: (mint_amount: number, collateralId: string) => void;
+  ) => Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">>;
+  withdrawStakeReward: (amountToWithdraw: number) => Promise<FinalizedCallTxData<StateraContract, "withdrawStakeReward">>;
+  withdrawStake: (amount: number) => Promise<FinalizedCallTxData<StateraContract, "withdrawStake">>;
+  mint_sUSD: (mint_amount: number, collateralId: string) => Promise<FinalizedCallTxData<StateraContract, "mint_sUSD">>;
   repay: (
     amount: number,
     _collateralId: string,
     contractAddress: string
-  ) => void;
+  ) => Promise<FinalizedCallTxData<StateraContract, "repay">>;
   withdrawCollateral: (
     amountToWithdraw: number,
     _collateralId: string,
     _oraclePrice: number
-  ) => void;
-  checkStakeReward: () => void;
+  ) => Promise<FinalizedCallTxData<StateraContract, "withdrawCollateral">>;
+  checkStakeReward: () => Promise<FinalizedCallTxData<StateraContract, "checkStakeReward">>;
 }
 /**
  * NB: Declaring a class implements a given type, means it must contain all defined properties and methods, then take on other extra properties or class
@@ -111,7 +115,7 @@ export class StateraAPI implements DeployedStateraAPI {
         return {
           mintCounter: ledgerState.mintCounter,
           totalMint: ledgerState.totalMint,
-          admin: ledgerState.admin.bytes,
+          super_admin: ledgerState.super_admin,
           nonce: ledgerState.nonce,
           sUSDTokenType: ledgerState.sUSDTokenType,
           stakePoolTotal: ledgerState.stakePoolTotal.value,
@@ -217,7 +221,8 @@ export class StateraAPI implements DeployedStateraAPI {
     collateralId: string,
     amount: number,
     providers: StateraContractProviders
-  ) {
+  ): Promise<FinalizedCallTxData<StateraContract, "depositToCollateralPool">>
+ {
     this.logger?.info(`Depositing collateral...`);
     // First update the private state for the minter
     const currentPrivaState = await providers.privateStateProvider.get(
@@ -225,7 +230,7 @@ export class StateraAPI implements DeployedStateraAPI {
     );
 
     let newPrivateState: StateraPrivateState | null;
-    
+
     const existingDepositiPosition =
       currentPrivaState &&
       currentPrivaState?.depositPositions.find((state) =>
@@ -233,7 +238,7 @@ export class StateraAPI implements DeployedStateraAPI {
       );
 
     if (existingDepositiPosition) {
-       newPrivateState = {
+      newPrivateState = {
         ...currentPrivaState,
         depositPositions: currentPrivaState.depositPositions.map((state) => {
           if (
@@ -256,7 +261,7 @@ export class StateraAPI implements DeployedStateraAPI {
           return state;
         }),
       };
-    }else{
+    } else {
       newPrivateState = currentPrivaState && {
         ...currentPrivaState,
         depositPositions: [
@@ -270,9 +275,7 @@ export class StateraAPI implements DeployedStateraAPI {
           },
         ],
       };
-
     }
-
 
     await StateraAPI.setPrivateState(
       providers,
@@ -295,10 +298,12 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+
+    return txData;
   }
 
   // Repays debtAsset
-  async repay(amount: number, _collateralId: string) {
+  async repay(amount: number, _collateralId: string): Promise<FinalizedCallTxData<StateraContract, "repay">> {
     this.logger?.info("Repaying debt asset...");
     // Construct tx with dynamic coin data
     const txData = await this.allReadyDeployedContract.callTx.repay(
@@ -317,6 +322,7 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
   async setSUSDTokenType() {
@@ -333,6 +339,8 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+
+    return txData;
   }
 
   // Repay debtAsset
@@ -340,7 +348,7 @@ export class StateraAPI implements DeployedStateraAPI {
     amountToWithdraw: number,
     _collateralId: string,
     _oraclePrice: number
-  ) {
+  ): Promise<FinalizedCallTxData<StateraContract, "withdrawCollateral">> {
     this.logger?.info("Withdrawing collateral asset...");
     // Construct tx with dynamic coin data
     const txData =
@@ -360,10 +368,11 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
   // Mints sUSD
-  async mint_sUSD(mint_amount: number, collateralId: string) {
+  async mint_sUSD(mint_amount: number, collateralId: string): Promise<FinalizedCallTxData<StateraContract, "mint_sUSD">> {
     this.logger?.trace(
       `Minting sUSD for your loan position at ${collateralId}`
     );
@@ -383,9 +392,10 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
-  async depositToStakePool(amount: number) {
+  async depositToStakePool(amount: number): Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">> {
     this.logger?.info("Depositing to stake pool...");
     // Construct tx with dynamic coin data
     const txData =
@@ -403,9 +413,10 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
-  async checkStakeReward() {
+  async checkStakeReward(): Promise<FinalizedCallTxData<StateraContract, "checkStakeReward">> {
     this.logger?.info("Checking your stake reward...");
     // Construct tx with dynamic coin data
     const txData =
@@ -421,6 +432,7 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
   async withdrawStakeReward(amountToWithdraw: number) {
@@ -443,17 +455,17 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
-  async withdrawStake(amount: number) {
+  async withdrawStake(amount: number): Promise<FinalizedCallTxData<StateraContract, "withdrawStake">> {
     this.logger?.info(
       `Withdrawing ${amount} from your effective stake pool balance...`
     );
     // Construct tx with dynamic coin data
-    const txData =
-      await this.allReadyDeployedContract.callTx.withdrawStake(
-        BigInt(amount)
-      );
+    const txData = await this.allReadyDeployedContract.callTx.withdrawStake(
+      BigInt(amount)
+    );
 
     this.logger?.trace({
       transactionAdded: {
@@ -465,6 +477,7 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
   async liquidatePosition(
@@ -499,6 +512,7 @@ export class StateraAPI implements DeployedStateraAPI {
         },
       },
     });
+    return txData;
   }
 
   // Used to get the private state from the wallets privateState Provider

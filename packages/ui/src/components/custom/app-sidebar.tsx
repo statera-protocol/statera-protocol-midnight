@@ -15,7 +15,7 @@ import {
 interface AppSidebarProps {
   activeSection: string
   setActiveSection: (section: string) => void
-  userRole: "user" | "admin"
+  // userRole: "user" | "admin"
 }
 
 const menuItems = [
@@ -51,8 +51,8 @@ const menuItems = [
   },
 ]
 
-export function AppSidebar({ activeSection, setActiveSection, userRole }: AppSidebarProps) {
-  const filteredItems = menuItems.filter((item) => item.roles.includes(userRole))
+export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps) {
+  // const filteredItems = menuItems.filter((item) => item.roles.includes(userRole))
 
   return (
     <Sidebar className="border-r border-slate-800/50 bg-slate-900/95 backdrop-blur-xl">
@@ -75,7 +75,7 @@ export function AppSidebar({ activeSection, setActiveSection, userRole }: AppSid
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-2">
-              {filteredItems.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     isActive={activeSection === item.id}

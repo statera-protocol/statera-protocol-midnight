@@ -199,7 +199,7 @@ export function StakingInterface() {
                 {stakingPools.map((pool, index) => (
                   <div
                     key={index}
-                    className="border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800/50 rounded-lg p-4 space-y-3"
+                    className="border border-slate-200 dark:border-zinc-700 bg-transparent dark:bg-zinc-800/50 rounded-lg p-4 space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">{pool.name}</h3>

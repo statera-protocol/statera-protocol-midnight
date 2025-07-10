@@ -1,6 +1,6 @@
 module CustomLibrary {
     import CompactStandardLibrary;
-    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata};
+    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata, generateAdminId};
     
     /* Structure for Private state */
     struct MintMetadata {
@@ -30,6 +30,17 @@ module CustomLibrary {
         return persistentHash<Vector<2, Bytes<32>>>(
             [ 
                 pad(32, "susd:user"),
+                persistentHash<Vector<2, Bytes<32>>>(
+                    [sk, kernel.self().bytes]
+                )
+             ]
+        );
+    }
+
+    circuit generateAdminId(sk: Bytes<32>): Bytes<32>{
+        return persistentHash<Vector<2, Bytes<32>>>(
+            [ 
+                pad(32, "susd:admin"),
                 persistentHash<Vector<2, Bytes<32>>>(
                     [sk, kernel.self().bytes]
                 )

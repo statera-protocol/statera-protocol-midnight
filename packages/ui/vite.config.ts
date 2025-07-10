@@ -11,7 +11,7 @@ export default defineConfig({
   cacheDir: "./.vite",
   build: {
     target: "esnext",
-    minify: false,
+    minify: false
   },
   plugins: [react(), tailwindcss(), wasm(), topLevelAwait(), viteCommonjs()],
   resolve: {

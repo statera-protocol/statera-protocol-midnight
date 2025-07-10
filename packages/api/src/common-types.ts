@@ -7,7 +7,6 @@ import {
 } from "@statera/ada-statera-protocol";
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
-import { QualifiedCoinInfo } from "@midnight-ntwrk/ledger";
 
 export const contractAddress =
   "02002355b40f3a15136ed0eed0a977ae859d1c94f2d6975f1a8294ebed2525d4d2ff";
@@ -30,7 +29,7 @@ export type DeployedStateraOnchainContract = FoundContract<StateraContract>;
 export type DerivedStateraContractState = {
   readonly mintCounter: bigint;
   readonly totalMint: bigint;
-  readonly admin: Uint8Array;
+  readonly super_admin: Uint8Array;
   readonly nonce: Uint8Array;
   readonly sUSDTokenType: Uint8Array;
   readonly stakePoolTotal: bigint;

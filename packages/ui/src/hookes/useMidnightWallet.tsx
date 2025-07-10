@@ -1,4 +1,4 @@
-import { MidnightWalletContext } from '@/providers/MidnightWalletProvider'
+import { MidnightWalletContext } from '@/providers/MidnightWalletProvider';
 import { useContext } from 'react'
 
 const useMidnightWallet = () => {
@@ -9,4 +9,4 @@ if(!context){
   return context;
 }
 
-export default useMidnightWallet
+export default useMidnightWallet;

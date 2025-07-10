@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -18,12 +18,29 @@ import {
   ArrowUpCircle,
   Wallet,
   AlertTriangle,
+  Clipboard,
 } from "lucide-react";
+import useDeployment from "@/hookes/useDeployment";
+import toast from "react-hot-toast";
+import useMidnightWallet from "@/hookes/useMidnightWallet";
+import {
+  stateraPrivateStateId,
+  utils,
+  type StateraContractProviders,
+} from "@statera/statera-api";
+import type { StateraPrivateState } from "@statera/ada-statera-protocol";
 
 export function CollateralManager() {
   const [depositAmount, setDepositAmount] = useState("");
+  const deploymentCTX = useDeployment();
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const walletContext = useMidnightWallet();
 
+  const [privateState, setPrivateState] = useState<
+    StateraPrivateState | undefined
+  >(undefined);
+  const [isCopying, setIsCopying] = useState<boolean>(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const collateralTypes = [
     {
       name: "tDUST",
@@ -50,6 +67,78 @@ export function CollateralManager() {
       color: "from-green-500 to-emerald-500",
     },
   ];
+  const depositPositions =
+    privateState &&
+    (() => {
+      const privateDepositIds = new Map(
+        privateState.depositPositions.map((state) => [
+          utils.uint8arraytostring(state.depositId),
+          state.mint_metadata,
+        ])
+      );
+
+      return deploymentCTX?.contractState?.collateralDepositors
+        .filter((vault) => privateDepositIds.has(vault.id))
+        .map((vault) => ({
+          ...vault,
+          collateral: privateDepositIds.get(vault.id)?.collateral,
+          debt: privateDepositIds.get(vault.id)?.debt,
+        }));
+    })();
+
+  const handleCopyVaultId = async (vault_Id: string, index: number) => {
+    setCopiedId(index);
+    setIsCopying(true);
+    try {
+      if (navigator.clipboard) {
+        await window.navigator.clipboard.writeText(vault_Id);
+        setTimeout(() => {
+          setIsCopying(false);
+          setCopiedId(null);
+        }, 1000);
+      } else {
+      }
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to copy vault id";
+      toast.error(errorMsg);
+    }
+  };
+
+  const handleCreatePosition = async (deposit_amt: number) => {
+    const newUUID = crypto.randomUUID();
+    try {
+      if (!walletContext) return;
+      const tx = await deploymentCTX?.stateraApi?.depositToCollateralPool(
+        newUUID,
+        deposit_amt,
+        walletContext?.providers as StateraContractProviders
+      );
+      if (tx?.public.status === "SucceedEntirely") {
+        toast.success("Deposited Collateral successfully");
+      }
+    } catch (error) {
+      toast.error("Collateral Deposit failed");
+    }
+  };
+
+  useEffect(() => {
+    (async function fetchPrivateState() {
+      try {
+        if (deploymentCTX?.stateraApi) {
+          const privateStateraState =
+            await walletContext?.privateStateProvider.get(
+              stateraPrivateStateId
+            );
+          console.log("🔐 User private state", privateStateraState);
+          setPrivateState(privateStateraState as StateraPrivateState);
+        }
+      } catch (error) {
+        toast.error("Failed to fetch private state");
+        throw error;
+      }
+    })();
+  }, [deploymentCTX?.stateraApi]);
 
   return (
     <div className="space-y-6">
@@ -89,107 +178,119 @@ export function CollateralManager() {
                 </TabsList>
 
                 <TabsContent value="deposit" className="space-y-4 mt-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="deposit-amount" className="text-slate-300">
-                      Amount to Deposit
-                    </Label>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleCreatePosition(Number(depositAmount));
+                    }}
+                  >
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="deposit-amount"
+                        className="text-slate-300"
+                      >
+                        Amount to Deposit
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          name="deposit-amount"
+                          id="deposit-amount"
+                          placeholder="0.00"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
+                        />
+                        <Button
+                          variant="outline"
+                          className="bg-slate-700/50 border-slate-600 text-slate-300 hover:text-white"
+                        >
+                          tDUST
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Available: 5.25 tDUST (~$10,500)
+                      </p>
+                    </div>
+
                     <div className="flex gap-2">
-                      <Input
-                        id="deposit-amount"
-                        placeholder="0.00"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
-                      />
                       <Button
                         variant="outline"
-                        className="bg-slate-700/50 border-slate-600 text-slate-300 hover:text-white"
+                        size="sm"
+                        onClick={() => setDepositAmount("1.25")}
+                        className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
                       >
-                        tDUST
+                        25%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("2.5")}
+                        className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
+                      >
+                        50%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("3.75")}
+                        className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
+                      >
+                        75%
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDepositAmount("5.25")}
+                        className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
+                      >
+                        Max
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      Available: 5.25 tDUST (~$10,500)
-                    </p>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDepositAmount("1.25")}
-                      className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
-                    >
-                      25%
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDepositAmount("2.5")}
-                      className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
-                    >
-                      50%
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDepositAmount("3.75")}
-                      className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
-                    >
-                      75%
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDepositAmount("5.25")}
-                      className="bg-slate-700/30 border-slate-600 text-slate-300 hover:text-white"
-                    >
-                      Max
-                    </Button>
-                  </div>
+                    <Separator className="bg-slate-700/50" />
 
-                  <Separator className="bg-slate-700/50" />
-
-                  <div className="space-y-3 p-4 bg-slate-700/20 rounded-lg border border-slate-600/30">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">Deposit Amount</span>
-                      <span className="text-white font-medium">
-                        {depositAmount || "0"} tDUST
-                      </span>
+                    <div className="space-y-3 p-4 bg-slate-700/20 rounded-lg border border-slate-600/30">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-300">Deposit Amount</span>
+                        <span className="text-white font-medium">
+                          {depositAmount || "0"} tDUST
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-300">USD Value</span>
+                        <span className="text-white font-medium">
+                          $
+                          {depositAmount
+                            ? (
+                                Number.parseFloat(depositAmount) * 20
+                              ).toLocaleString()
+                            : "0"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-300">
+                          New Collateral Ratio
+                        </span>
+                        <span className="text-green-400 font-medium">
+                          {depositAmount
+                            ? Math.round(
+                                165 + Number.parseFloat(depositAmount) * 5
+                              )
+                            : 165}
+                          %
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">USD Value</span>
-                      <span className="text-white font-medium">
-                        $
-                        {depositAmount
-                          ? (
-                              Number.parseFloat(depositAmount) * 2000
-                            ).toLocaleString()
-                          : "0"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-300">
-                        New Collateral Ratio
-                      </span>
-                      <span className="text-green-400 font-medium">
-                        {depositAmount
-                          ? Math.round(
-                              165 + Number.parseFloat(depositAmount) * 5
-                            )
-                          : 165}
-                        %
-                      </span>
-                    </div>
-                  </div>
 
-                  <Button
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
-                    disabled={!depositAmount}
-                  >
-                    <ArrowDownCircle className="w-4 h-4 mr-2" />
-                    Deposit Collateral
-                  </Button>
+                    <Button
+                      className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+                      disabled={!depositAmount}
+                      type="submit"
+                    >
+                      <ArrowDownCircle className="w-4 h-4 mr-2" />
+                      Deposit Collateral
+                    </Button>
+                  </form>
                 </TabsContent>
 
                 <TabsContent value="withdraw" className="space-y-4 mt-6">
@@ -243,113 +344,110 @@ export function CollateralManager() {
           </Card>
 
           <div className="flex gap-2 w-full pt-4">
-            <Card className="bg-slate-800/50 backdrop-blur-xl w-1/2 border-slate-700/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Wallet className="w-5 h-5 text-cyan-400" />
-                  Your Position
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Total Collateral</span>
-                    <span className="font-medium text-white">$60,000</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Minted Stablecoins</span>
-                    <span className="font-medium text-white">35,000 USC</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Collateral Ratio</span>
-                    <Badge className="bg-green-900/30 text-green-400 border-green-500/30">
-                      171%
-                    </Badge>
-                  </div>
-                </div>
+            {depositPositions?.length ? (
+              depositPositions.map((deposit, indx) => {
+                return (
+                  <Card className="bg-slate-800/50 backdrop-blur-xl w-1/2 border-slate-700/50">
+                    <CardHeader>
+                      <CardTitle className="flex justify-between items-center gap-2 text-white">
+                        <span>
+                          <Wallet className="w-5 h-5 text-cyan-400" />
+                          Your Position
+                        </span>
+                        <div className="flex gap-4 items-center">
+                          <span className="flex items-center gap-2 bg-slate-400 rounded-3xl">
+                            <span>Vault ID:</span>
+                            <input type="text" value={deposit.id} />
+                          </span>
+                          <Button
+                            onClick={() => handleCopyVaultId(deposit.id, indx)}
+                            className="bg-slate-400 border rounded-3xl backdrop:blur-2xl"
+                          >
+                            <Clipboard />
+                            <span className="text-slate-300 text-sm">
+                              {isCopying && copiedId == indx
+                                ? "copied"
+                                : "copy"}
+                            </span>
+                          </Button>
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">
+                            Total Collateral
+                          </span>
+                          <span className="font-medium text-white">
+                            {deposit.collateral}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">
+                            Minted Stablecoins
+                          </span>
+                          <span className="font-medium text-white">
+                            {deposit.debt} SUSD
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">
+                            Collateral Ratio
+                          </span>
+                          <Badge className="bg-green-900/30 text-green-400 border-green-500/30">
+                            171%
+                          </Badge>
+                        </div>
+                      </div>
 
-                <Separator className="bg-slate-700/50" />
+                      <Separator className="bg-slate-700/50" />
 
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Health Factor</span>
-                    <span className="text-green-400 font-medium">1.71</span>
-                  </div>
-                  <Progress value={85} className="h-2 bg-slate-700" />
-                  <p className="text-xs text-green-400">
-                    ✓ Healthy - Well above liquidation threshold
-                  </p>
-                </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">Health Factor</span>
+                          <span className="text-green-400 font-medium">
+                            1.71
+                          </span>
+                        </div>
+                        <Progress value={85} className="h-2 bg-slate-700" />
+                        <p className="text-xs text-green-400">
+                          ✓ Healthy - Well above liquidation threshold
+                        </p>
+                      </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Liquidation Price</span>
-                    <span className="text-red-400">$1,750 tDUST</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Current Price</span>
-                    <span className="text-green-400">$2,000 tDUST</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            
-            <Card className="bg-slate-800/50 backdrop-blur-xl w-1/2 border-slate-700/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Wallet className="w-5 h-5 text-cyan-400" />
-                  Your Position
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Total Collateral</span>
-                    <span className="font-medium text-white">$60,000</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Minted Stablecoins</span>
-                    <span className="font-medium text-white">35,000 USC</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Collateral Ratio</span>
-                    <Badge className="bg-green-900/30 text-green-400 border-green-500/30">
-                      171%
-                    </Badge>
-                  </div>
-                </div>
-
-                <Separator className="bg-slate-700/50" />
-
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Health Factor</span>
-                    <span className="text-green-400 font-medium">1.71</span>
-                  </div>
-                  <Progress value={85} className="h-2 bg-slate-700" />
-                  <p className="text-xs text-green-400">
-                    ✓ Healthy - Well above liquidation threshold
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Liquidation Price</span>
-                    <span className="text-red-400">$1,750 tDUST</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">Current Price</span>
-                    <span className="text-green-400">$2,000 tDUST</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">
+                            Liquidation Price
+                          </span>
+                          <span className="text-red-400">$1,750 tDUST</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-300">Current Price</span>
+                          <span className="text-green-400">$2,000 tDUST</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="w-full items-center gap-2 flex flex-col py-20 text-center">
+                <h1 className="text-slate-300 text-4xl font-semibold">
+                  You have no vaults available
+                </h1>
+                <p className="text-sm text-slate-400">
+                  Create a deposit position to be able to mint SUSD
+                </p>
+                <Wallet size={40} className="fill-blue-600" />
+              </div>
+            )}
           </div>
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-slate-800/50 backdrop-blur-xl w-1/2 border-slate-700/50">
+          <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
             <CardHeader>
               <CardTitle className="text-white">Collateral Assets</CardTitle>
             </CardHeader>

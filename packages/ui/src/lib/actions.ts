@@ -17,30 +17,10 @@ import {
   type DAppConnectorWalletAPI,
   type ServiceUriConfig,
 } from "@midnight-ntwrk/dapp-connector-api";
-import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
-import { FetchZkConfigProvider } from "@midnight-ntwrk/midnight-js-fetch-zk-config-provider";
-import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
-import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
-import {
-  type BalancedTransaction,
-  type UnbalancedTransaction,
-  createBalancedTx,
-} from "@midnight-ntwrk/midnight-js-types";
-import {
-  type CoinInfo,
-  Transaction,
-  type TransactionId,
-} from "@midnight-ntwrk/ledger";
-import { Transaction as ZswapTransaction } from "@midnight-ntwrk/zswap";
 import semver from "semver";
-import {
-  getLedgerNetworkId,
-  getZswapNetworkId,
-} from "@midnight-ntwrk/midnight-js-network-id";
-import { type TokenCircuitKeys } from "@statera/statera-api";
-import type { WalletAndProvider } from "./common-types";
 
-const connectWallet = async (): Promise<{
+
+export const connectWallet = async (): Promise<{
   wallet: DAppConnectorWalletAPI;
   uris: ServiceUriConfig;
 }> => {
@@ -135,60 +115,6 @@ const connectWallet = async (): Promise<{
     )
   );
 };
-
-export const initialWalletAndProviders =
-  async (): Promise<WalletAndProvider> => {
-    const { wallet, uris } = await connectWallet();
-    const walletState = await wallet.state();
-    const providers = {
-      privateStateProvider: levelPrivateStateProvider({
-        privateStateStoreName: "bboard-private-state",
-      }),
-      zkConfigProvider: new FetchZkConfigProvider<TokenCircuitKeys>(
-        window.location.origin,
-        fetch.bind(window)
-      ),
-      proofProvider: httpClientProofProvider(uris.proverServerUri),
-      publicDataProvider: indexerPublicDataProvider(
-        uris.indexerUri,
-        uris.indexerWsUri
-      ),
-      walletProvider: {
-        coinPublicKey: walletState.coinPublicKey,
-        encryptionPublicKey: walletState.encryptionPublicKey,
-        balanceTx(
-          tx: UnbalancedTransaction,
-          newCoins: CoinInfo[]
-        ): Promise<BalancedTransaction> {
-          return wallet
-            .balanceAndProveTransaction(
-              ZswapTransaction.deserialize(
-                tx.serialize(getLedgerNetworkId()),
-                getZswapNetworkId()
-              ),
-              newCoins
-            )
-            .then((zswapTx) =>
-              Transaction.deserialize(
-                zswapTx.serialize(getZswapNetworkId()),
-                getLedgerNetworkId()
-              )
-            )
-            .then(createBalancedTx)
-            .finally(() => {
-              console.log("balanceTxDone");
-            });
-        },
-      },
-      midnightProvider: {
-        submitTx(tx: BalancedTransaction): Promise<TransactionId> {
-          return wallet.submitTransaction(tx);
-        },
-      },
-    };
-
-    return { wallet, uris, providers };
-  };
 
 export const calculateExpiryDate = (duration: number, creationDate: number) => {
   const millisecondsPerHour = 1000 * 60 * 60 * 24;
