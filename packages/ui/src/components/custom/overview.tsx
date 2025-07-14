@@ -102,7 +102,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                Number(deploymentCtx?.contractState?.reservePoolTotal.value)
+                `${(Number(deploymentCtx?.contractState?.reservePoolTotal.value)/ 1_000_000)} tDUST`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}
@@ -126,7 +126,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                Number(deploymentCtx?.contractState?.totalMint)
+                `${Number(deploymentCtx?.contractState?.totalMint)} sUSD`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}
@@ -150,7 +150,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                Number(deploymentCtx?.contractState?.stakePoolTotal)
+                `${Number(deploymentCtx?.contractState?.stakePoolTotal)} sUSD`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}

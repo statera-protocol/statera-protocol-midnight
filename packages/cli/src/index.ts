@@ -181,7 +181,7 @@ const displayUserPrivateState = async (
     logger.info(`There is no private state stored at ${stateraPrivateStateId}`);
   console.log(
     `Current collateral reserved is:`,
-    privateState?.depositPositions
+    privateState?.mint_metadata
   );
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
 };
@@ -238,9 +238,7 @@ const circuit_main_loop = async (
             `How much do you want to deposit?`
           );
           await stateraApi.depositToCollateralPool(
-            await rli.question("Enter newly generated collateral id:"),
             Number(amountToDeposit),
-            providers
           );
 
           // Wait for wallet to sync after deposit
@@ -283,10 +281,8 @@ const circuit_main_loop = async (
           const mintAmount = Number(
             await rli.question("How much do you want to mint?")
           );
-          const collateralId = await rli.question("Enter your collateralId:");
-
           logger.info("Initiating mint operation...");
-          await stateraApi.mint_sUSD(mintAmount, collateralId);
+          await stateraApi.mint_sUSD(mintAmount);
 
           // Critical: Wait for wallet to sync and reflect minted tokens
           logger.info("Waiting for wallet to sync after minting...");
@@ -324,7 +320,6 @@ const circuit_main_loop = async (
             Number(
               await rli.question("How much of your debt do you want to offset:")
             ),
-            await rli.question("Enter ID of debt position to repay:")
           );
 
           // Wait for wallet to sync after repayment
@@ -356,9 +351,6 @@ const circuit_main_loop = async (
               await rli.question(
                 "How much of your collateral do you want to withdraw:"
               )
-            ),
-            await rli.question(
-              "Enter ID of collateral position you want to withdraw from:"
             ),
             Number(
               await rli.question(

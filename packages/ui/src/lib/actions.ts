@@ -124,3 +124,6 @@ export const calculateExpiryDate = (duration: number, creationDate: number) => {
   const dateObject = new Date(expiryDate);
   return dateObject.toLocaleDateString();
 };
+
+
+// export const calculate_SPECK_per_tDUST

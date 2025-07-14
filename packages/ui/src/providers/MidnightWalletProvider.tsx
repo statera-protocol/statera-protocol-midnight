@@ -237,7 +237,6 @@ const MidnightWalletProvider = ({
       const { wallet, uris } = await connectWallet();
       const connectedWalletState = await wallet.state();
       logger.info("wallet state", connectedWalletState);
-
       sessionStorage.setItem("WALLET_CONNECTED", JSON.stringify(true));
       setHasConnected(true);
 
