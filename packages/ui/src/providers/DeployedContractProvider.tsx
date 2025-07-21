@@ -1,4 +1,5 @@
 import useMidnightWallet from "@/hookes/useMidnightWallet";
+import type { StateraPrivateState } from "@statera/ada-statera-protocol";
 import {
   StateraAPI,
   type DeployedStateraAPI,
@@ -15,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 
 export interface DeploymentProvider {
+  readonly privateState: StateraPrivateState | null;
   readonly isJoining: boolean;
   readonly error: string | null;
   readonly hasJoined: boolean;
@@ -47,6 +49,9 @@ export const DeployedContractProvider = ({
     DerivedStateraContractState | undefined
   >(undefined);
   const [hasJoined, setHasJoined] = useState<boolean>(false);
+  const [privateState, setPrivateState] = useState<StateraPrivateState | null>(
+    null
+  );
 
   // Use the custom hook instead of useContext directly
   const walletContext = useMidnightWallet();
@@ -109,6 +114,19 @@ export const DeployedContractProvider = ({
     return () => stateSubscription.unsubscribe();
   }, [stateraApi]);
 
+  useEffect(() => {
+    if (!stateraApi && !walletContext) return;
+    (async function fetchPrivateState() {
+      const userPrivateState = await walletContext?.privateStateProvider.get(
+        "stateraPrivateState"
+      );
+
+      if (userPrivateState) {
+        setPrivateState(userPrivateState);
+      } else return;
+    })();
+  }, [walletContext?.privateStateProvider, contractState]);
+
   const contextValue: DeploymentProvider = {
     isJoining,
     hasJoined,
@@ -117,6 +135,7 @@ export const DeployedContractProvider = ({
     onJoinContract,
     clearError,
     contractState,
+    privateState,
   };
 
   return (

@@ -9,7 +9,7 @@ module CustomLibrary {
     }
 
     witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
-    witness get_mintmetadata_private_state(_depositId: Bytes<32>): MintMetadata;
+    witness get_mintmetadata_private_state(): MintMetadata;
     
  
     circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
@@ -23,6 +23,7 @@ module CustomLibrary {
         
         const [quotient, remainder] = disclose(division(dividend, divisor));
         assert (remainder < divisor, "Reminder error");
+        assert (quotient * divisor + remainder == dividend, "Invald divison result");
         return quotient;
     }
 
@@ -48,8 +49,8 @@ module CustomLibrary {
         );
     }
 
-    circuit getMintMetadata(_depositId: Bytes<32>): MintMetadata{
-        const {debt, collateral} = disclose(get_mintmetadata_private_state(disclose(_depositId)));
+    circuit getMintMetadata(): MintMetadata{
+        const {debt, collateral} = disclose(get_mintmetadata_private_state());
         return MintMetadata {
             collateral,
             debt

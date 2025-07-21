@@ -46,12 +46,12 @@ export type DerivedStateraContractState = {
 };
 
 export type DerivedDepositor = {
-  id: string;
+  id: Uint8Array;
   depositor: Depositor;
 };
 
 export type DerivedStaker = {
-  id: string;
+  id: Uint8Array;
   staker: Staker;
 };
 
