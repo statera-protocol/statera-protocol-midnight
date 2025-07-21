@@ -114,7 +114,7 @@ export function Overview() {
             </div>
           </CardContent>
         </Card>
-        <Card
+        <Card 
           className={`relative overflow-hidden backdrop-blur-xl border bg-gradient-to-br from-cyan-900/20 to-blue-900/20 border-cyan-500/30 shadow-lg shadow-cyan-500/10`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

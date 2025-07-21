@@ -8,7 +8,7 @@ const ConnectToWalletScreen = () => {
   return (
     <div className="w-full flex justify-center px-6 py-12 items-center  min-h-screen text-white bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       <Card
-        className={`relative lg:w-[40%] text-center flex justify-center items-center overflow-hidden backdrop-blur-xl border bg-gradient-to-br from-cyan-900/20 to-blue-900/20 border-cyan-500/30 shadow-lg shadow-cyan-500/10
+        className={`relative lg:w-[40%] px-8 py-14 text-center flex justify-center items-center overflow-hidden backdrop-blur-xl border bg-gradient-to-br from-cyan-900/20 to-blue-900/20 border-cyan-500/30 shadow-lg shadow-cyan-500/10
             `}
       >
         <div className="p-6 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">

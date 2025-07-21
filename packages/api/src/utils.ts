@@ -124,7 +124,7 @@ export function createDerivedStakersArray(stakers: {
     [Symbol.iterator](): Iterator<[Uint8Array, Staker]>;
 }): DerivedStaker[] {
   return Array.from(stakers).map(([key, staker]) => ({
-    id: uint8arraytostring(key),
+    id: key,
     staker: staker,
   }));
 }

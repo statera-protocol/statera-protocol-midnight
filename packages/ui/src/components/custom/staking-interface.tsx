@@ -13,11 +13,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Shield, Gift, Clock } from "lucide-react";
+import { TrendingUp, Shield, Gift, Clock, Loader2, Wallet } from "lucide-react";
+import useDeployment from "@/hookes/useDeployment";
+import toast from "react-hot-toast";
+import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
+import useMidnightWallet from "@/hookes/useMidnightWallet";
+import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+
+type StakersActions = "stake" | "unstake" | "check" | "withdraw";
 
 export function StakingInterface() {
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
+  const [isStaking, setIsStaking] = useState(false);
+  const [isUnstaking, setIsUnstaking] = useState(false);
+  const [withdrawingReward, setWithdrawingReward] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const deploymentCTX = useDeployment();
+  const walletCtx = useMidnightWallet();
+
+  const stakePosition =
+    walletCtx &&
+    deploymentCTX?.contractState?.stakers.find(
+      (position) =>
+        decodeCoinPublicKey(position.id) ===
+        parseCoinPublicKeyToHex(
+          walletCtx.state.coinPublicKey as string,
+          getZswapNetworkId()
+        )
+    );
 
   const stakingPools = [
     {
@@ -30,6 +55,53 @@ export function StakingInterface() {
     },
   ];
 
+  const handleStakeInteraction = async (
+    action: StakersActions,
+    stateSetter: React.Dispatch<React.SetStateAction<boolean>>,
+    amt?: number
+  ) => {
+    if (!deploymentCTX?.stateraApi) return;
+    let txResult;
+    stateSetter(true);
+    try {
+      switch (action) {
+        case "stake":
+          txResult = await deploymentCTX?.stateraApi.depositToStakePool(
+            amt as number
+          );
+          break;
+        case "unstake":
+          txResult = await deploymentCTX.stateraApi.withdrawStake(
+            amt as number
+          );
+          break;
+        case "check":
+          txResult = await deploymentCTX.stateraApi.checkStakeReward();
+          break;
+        case "withdraw":
+          txResult = await deploymentCTX.stateraApi.withdrawStakeReward(
+            amt as number
+          );
+          break;
+        default:
+          break;
+      }
+      txResult?.public.status === "SucceedEntirely"
+        ? toast.success(`${action.toLocaleUpperCase()} Transaction successfull`)
+        : toast.error(`${action.toLocaleUpperCase()} Transaction failed`);
+      stateSetter(false);
+    } catch (error) {
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : `${action.toLocaleUpperCase()} Transaction Failed`;
+      toast.error(errMsg);
+      stateSetter(false);
+    } finally {
+      stateSetter(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -41,7 +113,7 @@ export function StakingInterface() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
+          <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
             <CardHeader>
               <CardTitle>Stake sUSD Tokens</CardTitle>
               <CardDescription>
@@ -50,9 +122,19 @@ export function StakingInterface() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="stake" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="stake">Stake</TabsTrigger>
-                  <TabsTrigger value="unstake">Unstake</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
+                  <TabsTrigger
+                    value="stake"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                  >
+                    Stake
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="unstake"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                  >
+                    Unstake
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="stake" className="space-y-4">
@@ -76,28 +158,28 @@ export function StakingInterface() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setStakeAmount("625")}
+                      onClick={() => setStakeAmount("1")}
                     >
                       25%
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setStakeAmount("1250")}
+                      onClick={() => setStakeAmount("5")}
                     >
                       50%
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setStakeAmount("1875")}
+                      onClick={() => setStakeAmount("7")}
                     >
                       75%
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setStakeAmount("2500")}
+                      onClick={() => setStakeAmount("10")}
                     >
                       Max
                     </Button>
@@ -125,26 +207,33 @@ export function StakingInterface() {
                       <span>{stakeAmount || "0"} sUSD</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span>Estimated Daily Rewards</span>
-                      <span className="text-green-600">
-                        {stakeAmount
-                          ? (
-                              (Number.parseFloat(stakeAmount) * 0.125) /
-                              365
-                            ).toFixed(4)
-                          : "0"}{" "}
-                        sUSD
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
                       <span>Lock Period</span>
                       <span>7 days</span>
                     </div>
                   </div>
 
-                  <Button className="w-full" disabled={!stakeAmount}>
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Stake sUSD
+                  <Button
+                    onClick={() =>
+                      handleStakeInteraction(
+                        "stake",
+                        setIsStaking,
+                        parseInt(stakeAmount)
+                      )
+                    }
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+                    disabled={!stakeAmount}
+                  >
+                    {isStaking ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 animate-spin h-4 mr-2" />
+                        Stake sUSD
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        Stake sUSD
+                      </div>
+                    )}
                   </Button>
                 </TabsContent>
 
@@ -178,9 +267,28 @@ export function StakingInterface() {
                     </p>
                   </div>
 
-                  <Button className="w-full" disabled={!unstakeAmount}>
-                    <Clock className="w-4 h-4 mr-2" />
-                    Unstake sUSD
+                  <Button
+                    onClick={() =>
+                      handleStakeInteraction(
+                        "unstake",
+                        setIsUnstaking,
+                        parseInt(unstakeAmount)
+                      )
+                    }
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+                    disabled={!unstakeAmount}
+                  >
+                    {isUnstaking ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Unstake sUSD...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 mr-2" />
+                        Unstake sUSD
+                      </div>
+                    )}
                   </Button>
                 </TabsContent>
               </Tabs>
@@ -221,7 +329,12 @@ export function StakingInterface() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Your Stake</p>
-                        <p className="font-medium">{pool.userStaked} sUSD</p>
+                        <p className="font-medium">
+                          {(stakePosition &&
+                            stakePosition.staker.stake_reward) ||
+                            0}{" "}
+                          sUSD
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Rewards</p>
@@ -229,15 +342,6 @@ export function StakingInterface() {
                           {pool.rewards} sUSD
                         </p>
                       </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        Stake More
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        Claim Rewards
-                      </Button>
                     </div>
                   </div>
                 ))}
@@ -247,37 +351,86 @@ export function StakingInterface() {
         </div>
 
         <div className="space-y-6">
-          <Card className="bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gift className="w-4 h-4" />
-                Your Rewards
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Pending Rewards</span>
-                  <span className="font-medium text-green-600">
-                    192.75 sUSD
-                  </span>
+          {stakePosition ? (
+            <Card className="bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Gift className="w-4 h-4" />
+                  Your Reward Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Pending Rewards</span>
+                    <span className="font-medium text-green-600">
+                      {stakePosition.staker.stake_reward} tDUST
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Claimed Today</span>
+                    <span className="font-medium">0 sUSD</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Earned</span>
+                    <span className="font-medium">
+                      {stakePosition.staker.stake_reward} sUSD
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Claimed Today</span>
-                  <span className="font-medium">25.50 sUSD</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Total Earned</span>
-                  <span className="font-medium">1,247.25 sUSD</span>
-                </div>
-              </div>
 
-              <Button className="w-full">
-                <Gift className="w-4 h-4 mr-2" />
-                Claim All Rewards
-              </Button>
-            </CardContent>
-          </Card>
+                <Button
+                  onClick={() => handleStakeInteraction("check", setChecking)}
+                  className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+                >
+                  {checking ? (
+                    <div>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Checking...
+                    </div>
+                  ) : (
+                    <div>
+                      <Gift className="w-4 h-4 mr-2" />
+                      Check current stake reward
+                    </div>
+                  )}
+                </Button>
+                {stakePosition && stakePosition.staker.stake_reward > 0 && (
+                  <Button
+                    onClick={() =>
+                      handleStakeInteraction(
+                        "withdraw",
+                        setWithdrawingReward,
+                        parseInt(stakeAmount)
+                      )
+                    }
+                    size="sm"
+                    variant="outline"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+                  >
+                    {withdrawingReward ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Claiming Reward...
+                      </div>
+                    ) : (
+                      "Claim Rewards"
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="w-full border-slate-700/50 rounded-lg border items-center gap-2 flex flex-col py-20 text-center">
+              <h1 className="text-slate-300 text-2xl font-semibold">
+                You have no stake position
+              </h1>
+              <p className="text-sm text-slate-400">
+                Stake sUSD to earn stake reward in other tokens
+              </p>
+              <Wallet size={40} className="fill-blue-600" />
+            </div>
+          )}
 
           <Card className="bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
             <CardHeader>
@@ -287,7 +440,9 @@ export function StakingInterface() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Total Staked</span>
-                  <span className="font-medium">7,500 sUSD</span>
+                  <span className="font-medium">
+                    {deploymentCTX?.contractState?.stakePoolTotal} sUSD
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Average APY</span>

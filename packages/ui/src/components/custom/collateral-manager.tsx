@@ -24,8 +24,9 @@ import useDeployment from "@/hookes/useDeployment";
 import toast from "react-hot-toast";
 import useMidnightWallet from "@/hookes/useMidnightWallet";
 import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
-import { parseCoinPublicKeyToHex } from '@midnight-ntwrk/midnight-js-utils';
+import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { DebtPositionStatus } from "@statera/ada-statera-protocol";
 
 export function CollateralManager() {
   const [depositAmount, setDepositAmount] = useState("");
@@ -63,12 +64,17 @@ export function CollateralManager() {
   ];
 
   const depositPosition = useCallback(() => {
-    if (!deploymentCTX?.privateState || !deploymentCTX?.contractState?.collateralDepositors)
+    if (
+      !deploymentCTX?.privateState ||
+      !deploymentCTX?.contractState?.collateralDepositors
+    )
       return;
-    const walletAddressHex = parseCoinPublicKeyToHex(walletContext?.state.coinPublicKey as string, getZswapNetworkId()) 
+    const walletAddressHex = parseCoinPublicKeyToHex(
+      walletContext?.state.coinPublicKey as string,
+      getZswapNetworkId()
+    );
     const vault = deploymentCTX.contractState.collateralDepositors.find(
-      (vault) =>
-        decodeCoinPublicKey(vault.id) == walletAddressHex
+      (vault) => decodeCoinPublicKey(vault.id) == walletAddressHex
     );
     console.log("vault", vault);
     if (!vault) return;
@@ -110,7 +116,6 @@ export function CollateralManager() {
     }
   };
 
-
   return (
     <div className="space-y-6">
       <div>
@@ -149,9 +154,7 @@ export function CollateralManager() {
                 </TabsList>
 
                 <TabsContent value="deposit" className="space-y-4 mt-6">
-                  <div
-                    className="space-y-2"
-                  >
+                  <div className="space-y-2">
                     <div className="space-y-2">
                       <Label
                         htmlFor="deposit-amount"
@@ -302,7 +305,8 @@ export function CollateralManager() {
                     </div>
                     <p className="text-xs text-slate-400">
                       Available to withdraw:{" "}
-                      {deploymentCTX?.privateState?.mint_metadata.collateral} tDUST (~$
+                      {deploymentCTX?.privateState?.mint_metadata.collateral}{" "}
+                      tDUST (~$
                       {deploymentCTX?.privateState?.mint_metadata.collateral})
                     </p>
                   </div>
@@ -353,9 +357,12 @@ export function CollateralManager() {
           {depositPosition ? (
             <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-cyan-400" />
-                  Your Position
+                <CardTitle className="text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-cyan-400" />
+                    Your Position
+                  </div>
+                  <Badge variant="secondary">{depositPosition.depositor.position == DebtPositionStatus.inactive ? "Inactive" : (depositPosition.depositor.position == DebtPositionStatus.active ? "Active" : "Closed")}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -367,9 +374,7 @@ export function CollateralManager() {
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">
-                      Minted Stablecoins
-                    </span>
+                    <span className="text-slate-300">Minted Stablecoins</span>
                     <span className="font-medium text-white">
                       {deploymentCTX?.privateState?.mint_metadata.debt} SUSD
                     </span>
@@ -387,7 +392,9 @@ export function CollateralManager() {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-300">Health Factor</span>
-                    <span className="text-green-400 font-medium">{depositPosition.depositor.hFactor}</span>
+                    <span className="text-green-400 font-medium">
+                      {depositPosition.depositor.hFactor}
+                    </span>
                   </div>
                   <Progress value={85} className="h-2 bg-slate-700" />
                   <p className="text-xs text-green-400">
@@ -397,12 +404,12 @@ export function CollateralManager() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-slate-300">
-                      Liquidation Price
-                    </span>
+                    <span className="text-slate-300">Liquidation Price</span>
                     <span className="text-red-400">
                       $
-                      {(Number(deploymentCTX?.privateState?.mint_metadata.collateral) *
+                      {(Number(
+                        deploymentCTX?.privateState?.mint_metadata.collateral
+                      ) *
                         Number(
                           deploymentCTX?.contractState?.liquidationThreshold
                         )) /

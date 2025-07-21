@@ -115,16 +115,16 @@ export function MintingInterface() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card className="bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
+          <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
             <CardHeader>
               <CardTitle>Mint/Repay sUSD</CardTitle>
               <CardDescription>Manage your stablecoin position</CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="mint" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="mint">Mint sUSD</TabsTrigger>
-                  <TabsTrigger value="repay">Repay sUSD</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
+                  <TabsTrigger value="mint" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white">Mint sUSD</TabsTrigger>
+                  <TabsTrigger value="repay" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white">Repay sUSD</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="mint" className="space-y-4">
@@ -244,7 +244,7 @@ export function MintingInterface() {
                   </div>
 
                   <Button
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
                     disabled={
                       !mintAmount ||
                       (calculateHealthFactor(mintAmount, "mint") as number) <
@@ -316,7 +316,7 @@ export function MintingInterface() {
                   </div>
 
                   <Button
-                    className="w-full"
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
                     disabled={!repayAmount}
                     onClick={() =>
                       handleMintOrRepaySUSD(parseInt(repayAmount), "repay")

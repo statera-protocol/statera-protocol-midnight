@@ -46,8 +46,6 @@ export interface DeployedStateraAPI {
   ) => Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">>;
   depositToStakePool: (
     amount: number,
-    tokenType: string,
-    stakeId: string
   ) => Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">>;
   withdrawStakeReward: (
     amountToWithdraw: number

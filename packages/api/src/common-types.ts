@@ -51,7 +51,7 @@ export type DerivedDepositor = {
 };
 
 export type DerivedStaker = {
-  id: string;
+  id: Uint8Array;
   staker: Staker;
 };
 

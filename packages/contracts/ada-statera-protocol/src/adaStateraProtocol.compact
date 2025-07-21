@@ -5,7 +5,7 @@ import "./CustomLibrary";
 export {CoinInfo, MintMetadata, Depositor, Staker, DebtPositionStatus};
 
 /* Describes the status of a user's debt position */
-enum DebtPositionStatus { inactive, active, closed, liquidated };
+enum DebtPositionStatus { inactive, active, closed };
 
 export ledger mintCounter: Counter;
 export ledger totalMint: Uint<128>;
@@ -161,6 +161,7 @@ export circuit depositToCollateralPool(coin: CoinInfo, _deposit_amt: Uint<64>): 
         depositors.insert(depositId, Depositor{
             ...currenDepositPosition,
             borrowLimit: borrowLimit,
+            position: prev_metadata.collateral == 0 ? DebtPositionStatus.inactive : currenDepositPosition.position,
             metadataHash: newMetadataHash
         });
     }else{
@@ -253,7 +254,7 @@ export circuit withdrawCollateral(_amountToWithdraw: Uint<32>, _oraclePrice: Uin
 
    // Checks to see if user has maliciously uttered private state
    assert (metadataHash == depositPositionToWthdraw.metadataHash, "Can not withdraw collateral: Invalid private state");
-   assert (depositPositionToWthdraw.position != DebtPositionStatus.liquidated, "Can not withdrawl collateral: Your position has been liquidated");
+   assert (depositPositionToWthdraw.position != DebtPositionStatus.closed, "Can not withdrawl collateral: Your position has been liquidated");
    // Minimum Collateral Value, Calculated using (Debt * MCR)
    const MCV = DivisionFunction((metadata.debt * MCR) as Uint<64>, percentageDivisor);
    const withdrawableCollateral = DivisionFunction(((metadata.collateral * _oraclePrice) - MCV) as Uint<64>, _oraclePrice);
@@ -519,7 +520,7 @@ export circuit liquidateDebtPosition(
     depositors.insert(disclose(_depositId), Depositor {
         ...collateralDepositToLiquidate,    
         hFactor: 0,
-        position: DebtPositionStatus.liquidated,
+        position: DebtPositionStatus.closed,
         borrowLimit: 0,
     });
 }
