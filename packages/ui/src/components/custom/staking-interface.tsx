@@ -44,17 +44,6 @@ export function StakingInterface() {
         )
     );
 
-  const stakingPools = [
-    {
-      name: "Protocol Stake Pool",
-      apy: "8.2%",
-      tvl: "$1,200,000",
-      userStaked: "2,500",
-      rewards: "67.25",
-      risk: "Low",
-    },
-  ];
-
   const handleStakeInteraction = async (
     action: StakersActions,
     stateSetter: React.Dispatch<React.SetStateAction<boolean>>,
@@ -295,7 +284,7 @@ export function StakingInterface() {
             </CardContent>
           </Card>
 
-          <Card className="mt-6 bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
+          {/* <Card className="mt-6 bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
             <CardHeader>
               <CardTitle>Staking Pools</CardTitle>
               <CardDescription>
@@ -347,7 +336,7 @@ export function StakingInterface() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         <div className="space-y-6">

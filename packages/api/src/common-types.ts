@@ -46,6 +46,7 @@ export type DerivedStateraContractState = {
   readonly admins: Uint8Array[];
   readonly LVT: bigint;
   readonly MCR: bigint;
+  readonly liquidationCount: bigint;
   readonly validCollateralType: Uint8Array;
 };
 

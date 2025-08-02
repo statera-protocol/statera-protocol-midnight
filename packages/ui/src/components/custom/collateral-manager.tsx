@@ -184,9 +184,6 @@ export function CollateralManager() {
                         </Button>
                       </div>
                       <p className="text-xs text-slate-400">
-                        Available: 5.25 tDUST (~$10,500)
-                      </p>
-                      <p className="text-xs text-slate-400">
                         Approx. deposit: {depositAmount || 0} tDUST ($
                         {Math.round(Number(depositAmount))})
                       </p>

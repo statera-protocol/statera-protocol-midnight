@@ -76,7 +76,10 @@ export function MintingInterface() {
   ) => {
     action == "mint" ? setIsMinting(true) : setIsRepaying(true);
     try {
-      if (action == "mint" && amount > Number(mintPosition?.depositor.borrowLimit)) {
+      if (
+        action == "mint" &&
+        amount > Number(mintPosition?.depositor.borrowLimit)
+      ) {
         // handle case where amount is greater than debt
         toast.error("Mint greater than borrow limit is not allowed");
         return;
@@ -88,7 +91,11 @@ export function MintingInterface() {
           : await deploymentCTX?.stateraApi?.repay(amount);
       action == "mint" ? setIsMinting(false) : setIsRepaying(false);
       if (result?.public.status === "SucceedEntirely") {
-        toast.success(action == "mint" ? `Minted ${amount} sUSD successfully` : `Repayment successful`);
+        toast.success(
+          action == "mint"
+            ? `Minted ${amount} sUSD successfully`
+            : `Repayment successful`
+        );
       } else {
         toast.error("Failed to Mint sUSD. Try again");
       }
@@ -123,8 +130,18 @@ export function MintingInterface() {
             <CardContent>
               <Tabs defaultValue="mint" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
-                  <TabsTrigger value="mint" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white">Mint sUSD</TabsTrigger>
-                  <TabsTrigger value="repay" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white">Repay sUSD</TabsTrigger>
+                  <TabsTrigger
+                    value="mint"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                  >
+                    Mint sUSD
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="repay"
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
+                  >
+                    Repay sUSD
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="mint" className="space-y-4">
@@ -224,21 +241,6 @@ export function MintingInterface() {
                           ? (Number.parseFloat(mintAmount) * 0.0).toFixed(2)
                           : "0"}{" "}
                         sUSD
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>New Health Factor</span>
-                      <span
-                        className={
-                          (calculateHealthFactor(
-                            mintAmount <= "0" ? "1" : mintAmount,
-                            "mint"
-                          ) as number) < minHFator
-                            ? "text-red-600"
-                            : "text-green-600"
-                        }
-                      >
-                        {calculateHealthFactor(mintAmount, "mint")}%
                       </span>
                     </div>
                   </div>

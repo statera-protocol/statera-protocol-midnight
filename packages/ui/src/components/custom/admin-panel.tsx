@@ -13,9 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Users, Activity, Loader2 } from "lucide-react";
 import useDeployment from "@/hookes/useDeployment";
-import {
-  decodeCoinPublicKey,
-} from "@midnight-ntwrk/compact-runtime";
+import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import useMidnightWallet from "@/hookes/useMidnightWallet";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
@@ -23,6 +21,7 @@ import toast from "react-hot-toast";
 import ContractUpdateTab from "./update-tab";
 import DeploymentBoard from "./deployment-tab";
 import OrganizationTab from "./organization-tab";
+import { DebtPositionStatus } from "@statera/ada-statera-protocol";
 
 export type AdminActions = "setSUSDType" | "add" | "update" | "transfer";
 export type UpdatePayload = {
@@ -36,13 +35,6 @@ export type AdminPayload = UpdatePayload | string;
 export function AdminPanel() {
   const deploymentUtils = useDeployment();
   const walletUtils = useMidnightWallet();
-
-  const systemMetrics = [
-    { label: "Total Users", value: "1,247", change: "+12%" },
-    { label: "Active Positions", value: "892", change: "+8%" },
-    { label: "Liquidations (24h)", value: "23", change: "-15%" },
-    { label: "Protocol Revenue", value: "$45,230", change: "+22%" },
-  ];
 
   const recentActions = [
     { action: "Collateral ratio updated", user: "Admin", time: "2 hours ago" },
@@ -126,7 +118,7 @@ export function AdminPanel() {
         : toast.error(`${action.toLocaleUpperCase()} Transaction failed`);
       stateSetter(false);
     } catch (error) {
-      console.log(`${action}`, error)
+      console.log(`${action}`, error);
       const errMsg =
         error instanceof Error ? error.message : "Transaction failed";
       toast.error(errMsg);
@@ -146,28 +138,79 @@ export function AdminPanel() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {systemMetrics.map((metric, index) => (
-          <Card
-            key={index}
-            className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50"
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white">
-                {metric.label}
-              </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-white">
-                {metric.value}
-              </div>
-              <p className="text-xs text-muted-foreground text-slate-400">
-                <span className="text-green-600">{metric.change}</span> from
-                last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-white">
+              Total Users
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">
+              {deploymentUtils.contractState.collateralDepositors.length +
+                deploymentUtils.contractState.stakers.length +
+                deploymentUtils.contractState.admins.length +
+                1}
+            </div>
+            <p className="text-xs text-muted-foreground text-slate-400">
+              <span className="text-green-600">{12}</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-white">
+              Active Positions
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">
+              {
+                deploymentUtils.contractState.collateralDepositors.filter(
+                  (deposit) =>
+                    deposit.depositor.position == DebtPositionStatus.active
+                ).length
+              }
+            </div>
+            <p className="text-xs text-muted-foreground text-slate-400">
+              <span className="text-green-600">{12}</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-white">
+              Liquidations
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{deploymentUtils.contractState.liquidationCount}</div>
+            <p className="text-xs text-muted-foreground text-slate-400">
+              <span className="text-green-600">{12}</span> from last month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-white">
+              Protocol Revenue
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">
+              ${deploymentUtils.contractState.reservePoolTotal.value}
+            </div>
+            <p className="text-xs text-muted-foreground text-slate-400">
+              <span className="text-green-600">{12}</span> from last month
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

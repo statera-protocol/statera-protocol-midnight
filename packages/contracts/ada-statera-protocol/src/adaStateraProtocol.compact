@@ -39,6 +39,7 @@ export ledger cumulative_scaling_factor: Uint<2>;
 export ledger validCollateralAssetType: Bytes<32>;
 ledger percentageDivisor: Uint<64>;
 export ledger SPECK_per_tDUST: Uint<64>;
+export ledger liquidationCount: Counter;
 
 /* Liquation monitoring variable
     * ADA_sUSD_index --> Keeps track of the entire rate of one sUSD in relative to liquidated ADA
@@ -529,4 +530,6 @@ export circuit liquidateDebtPosition(
         position: DebtPositionStatus.closed,
         borrowLimit: 0,
     });
+
+    liquidationCount.increment(1);
 }

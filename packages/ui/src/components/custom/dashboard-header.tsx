@@ -27,7 +27,7 @@ export function DashboardHeader() {
   const deploymentCTX = useDeployment();
 
   return (
-    <header className="border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-xl">
+    <header className="border-b sticky z-[50] top-0 border-slate-800/50 bg-slate-900/80 backdrop-blur-xl">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4">
           <SidebarTrigger className="text-slate-300 hover:text-white" />

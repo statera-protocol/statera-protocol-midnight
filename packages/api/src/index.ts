@@ -133,6 +133,7 @@ export class StateraAPI implements DeployedStateraAPI {
           admins: utils.createDerivedAdminArray(ledgerState.admins),
           LVT: ledgerState.LVT,
           MCR: ledgerState.MCR,
+          liquidationCount: ledgerState.liquidationCount,
           validCollateralType: ledgerState.validCollateralAssetType
         };
       }
