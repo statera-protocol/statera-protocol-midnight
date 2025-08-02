@@ -1,6 +1,5 @@
 import { combineLatest, concat, from, map, Observable, tap } from "rxjs";
 import {
-  contractAddress,
   DeployedStateraOnchainContract,
   DerivedStateraContractState,
   StateraContract,
@@ -9,7 +8,7 @@ import {
 } from "./common-types.js";
 import {
   ContractAddress,
-  persistentHash,
+  encodeCoinPublicKey,
 } from "@midnight-ntwrk/compact-runtime";
 import {
   deployContract,
@@ -45,7 +44,7 @@ export interface DeployedStateraAPI {
     providers: StateraContractProviders
   ) => Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">>;
   depositToStakePool: (
-    amount: number,
+    amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">>;
   withdrawStakeReward: (
     amountToWithdraw: number
@@ -57,7 +56,7 @@ export interface DeployedStateraAPI {
     mint_amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "mint_sUSD">>;
   repay: (
-    amount: number,
+    amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "repay">>;
   withdrawCollateral: (
     amountToWithdraw: number,
@@ -66,6 +65,10 @@ export interface DeployedStateraAPI {
   checkStakeReward: () => Promise<
     FinalizedCallTxData<StateraContract, "checkStakeReward">
   >;
+  reset: (liquidation_threshold: number, LVT: number, MCR: number) => Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">>;
+  addAdmin: (addrs: string) => Promise<FinalizedCallTxData<StateraContract, "addAdmin">>;
+  setSUSDColor: () => Promise<FinalizedCallTxData<StateraContract, "setSUSDTokenType">>;
+  transferSuperAdminRole: (addrs: string) => Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">>
 }
 /**
  * NB: Declaring a class implements a given type, means it must contain all defined properties and methods, then take on other extra properties or class
@@ -127,6 +130,10 @@ export class StateraAPI implements DeployedStateraAPI {
           noOfDepositors: ledgerState.depositors.size(),
           mintMetadata: privateState?.mint_metadata,
           secrete_key: privateState?.secrete_key,
+          admins: utils.createDerivedAdminArray(ledgerState.admins),
+          LVT: ledgerState.LVT,
+          MCR: ledgerState.MCR,
+          validCollateralType: ledgerState.validCollateralAssetType
         };
       }
     );
@@ -265,13 +272,71 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async setSUSDTokenType() {
+  async setSUSDColor(): Promise<FinalizedCallTxData<StateraContract, "setSUSDTokenType">> {
     const txData =
       await this.allReadyDeployedContract.callTx.setSUSDTokenType();
 
     this.logger?.trace({
       transactionAdded: {
         circuit: "setSUSDTokenType",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+    return txData;
+  }
+
+  async reset(liquidation_threshold: number, LVT: number, MCR: number): Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">> {
+    const txData =
+      await this.allReadyDeployedContract.callTx.resetProtocolConfig(
+        BigInt(liquidation_threshold),
+        BigInt(LVT),
+        BigInt(MCR)
+      );
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "reset",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+    return txData;
+  }
+
+  async addAdmin(addrs: string): Promise<FinalizedCallTxData<StateraContract, "addAdmin">> {
+    const txData =
+      await this.allReadyDeployedContract.callTx.addAdmin(encodeCoinPublicKey(addrs));
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "addAdmin",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+    return txData;
+  }
+
+  async transferSuperAdminRole(addrs: string): Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">> {
+    const txData =
+      await this.allReadyDeployedContract.callTx.transferAdminRole(encodeCoinPublicKey(addrs));
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "transferSuperAdminRole",
         txHash: txData.public.txHash,
         blockDetails: {
           blockHash: txData.public.blockHash,
@@ -470,17 +535,6 @@ export class StateraAPI implements DeployedStateraAPI {
           debt: BigInt(0),
         },
       }
-    );
-  }
-
-  // Used to set the private state in the wallets privateState Provider
-  private static async setPrivateState(
-    providers: StateraContractProviders,
-    privateState: StateraPrivateState
-  ) {
-    await providers.privateStateProvider.set(
-      stateraPrivateStateId,
-      privateState
     );
   }
 }

@@ -7,6 +7,8 @@ import { SidebarProvider } from "../ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import { DashboardHeader } from "./dashboard-header";
 import { Toaster } from "react-hot-toast";
+import { AdminPanel } from "./admin-panel";
+
 
 const Dashboard = () => {
   const [activeSection, setActiveSection] = useState("overview");
@@ -21,6 +23,8 @@ const Dashboard = () => {
         return <MintingInterface />;
       case "stake":
         return <StakingInterface />;
+      case "admin":
+        return <AdminPanel />;  
       default:
         return <Overview />;
     }

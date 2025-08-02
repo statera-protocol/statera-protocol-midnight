@@ -18,7 +18,7 @@ import {
   ledger,
   StateraPrivateState,
 } from "@statera/ada-statera-protocol";
-import { toHex } from "@midnight-ntwrk/midnight-js-utils";
+import { parseCoinPublicKeyToHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
 import { type Config, StandaloneConfig } from "./config.js";
 import {
   getLedgerNetworkId,
@@ -204,6 +204,7 @@ You can do one of the following:
   13. Set sUSDTokenTYpe (ADMIN ONLY)
   14. Liquidate collateral position (LIQUIDATOR ONLY)
   15. Withdraw your stake balance (STAKERS ONLY)
+  16. Transfer super admin role (STAKERS ONLY)
 
 Which would you like to do? `;
 
@@ -379,7 +380,7 @@ const circuit_main_loop = async (
         case "13": {
           // New option to manually check wallet state
           logger.info("Setting sUSDTokenType...");
-          await stateraApi.setSUSDTokenType();
+          await stateraApi.setSUSDColor();
           logger.info(
             "Waiting for wallet to sync after setting sUSDTokenType..."
           );
@@ -418,6 +419,24 @@ const circuit_main_loop = async (
           // Wait for wallet to sync after withdrawal
           logger.info(
             "Waiting for wallet to sync after stake reward withdrawal..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+
+        case "16": {
+          const addrss = await rli.question("Enter coin public key of the new super admin: ")
+          await stateraApi.transferSuperAdminRole(
+              parseCoinPublicKeyToHex(
+                addrss,
+                getZswapNetworkId()
+              )
+          );
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after transfering super admin role..."
           );
           await waitForWalletSyncAfterOperation(wallet, logger);
           await displayComprehensiveWalletState(wallet, currentState, logger);

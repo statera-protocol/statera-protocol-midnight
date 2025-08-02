@@ -85,34 +85,21 @@ const MidnightWalletProvider = ({
   logger,
 }: PropsWithChildren<{ logger: Logger }>) => {
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
-  const [hasConnected, setHasConnected] = useState<boolean>(() => {
-    const isWalletConnected = sessionStorage.getItem("WALLET_CONNECTED");
-    return isWalletConnected ? JSON.parse(isWalletConnected) : false;
-  });
-  const [walletAPI, setWalletAPI] = useState<WalletAPIType | undefined>(() => {
-    const existingWalletApi = sessionStorage.getItem("WALLET_API");
-    return existingWalletApi ? JSON.parse(existingWalletApi) : undefined;
-  });
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [hasConnected, setHasConnected] = useState<boolean>(false);
+  const [walletAPI, setWalletAPI] = useState<WalletAPIType | undefined>();
+  const [error, setError] = useState<string | undefined>();
   const [providers, setProviders] = useState<
     StateraContractProviders | undefined
   >(undefined);
-  const [walletState, setWalletState] = useState<
-    MidnightWalletState | undefined
-  >(() => {
-    const previousWalletState = sessionStorage.getItem("WALLET_STATE");
-    return previousWalletState
-      ? JSON.parse(previousWalletState)
-      : {
-          address: undefined,
-          isConnecting: false,
-          hasConnected: false,
-          coinPublicKey: undefined,
-          encryptionPublicKey: undefined,
-          providers: undefined,
-          walletAPI: undefined,
-          error: null,
-        };
+  const [walletState, setWalletState] = useState<MidnightWalletState>({
+    address: undefined,
+    isConnecting: false,
+    hasConnected: false,
+    coinPublicKey: undefined,
+    encryptionPublicKey: undefined,
+    providers: undefined,
+    walletAPI: undefined,
+    error: null,
   });
 
   const checkProofServerStatus = async (uri: string) => {
@@ -229,18 +216,80 @@ const MidnightWalletProvider = ({
     }
   }, [walletAPI]);
 
-  // Enables user connect their wallet to the DAPP
-  const connect = async () => {
+  const reconnectToWalletAndProviders = async () => {
+    // Check if we should attempt reconnection
+    const wasConnected = sessionStorage.getItem("WALLET_CONNECTED");
+    if (!wasConnected || wasConnected !== "true") {
+      return;
+    }
+
     setIsConnecting(true);
-    logger.info("Connecting to wallet....");
+    logger?.info("Attempting to reconnect wallet...");
+
     try {
       const { wallet, uris } = await connectWallet();
       const connectedWalletState = await wallet.state();
-      logger.info("wallet state", connectedWalletState);
-      sessionStorage.setItem("WALLET_CONNECTED", JSON.stringify(true));
-      setHasConnected(true);
+      
+      // Validate the wallet state
+      if (!connectedWalletState.address || !connectedWalletState.coinPublicKey) {
+        throw new Error("Invalid wallet state - missing required fields");
+      }
 
-      // Sets the wallet api to trigger changes to the main wallet state
+      logger?.info("Wallet state retrieved", connectedWalletState);
+      
+      const newWalletAPI = {
+        address: connectedWalletState.address,
+        coinPublicKey: connectedWalletState.coinPublicKey,
+        encryptionPublicKey: connectedWalletState.encryptionPublicKey,
+        wallet: wallet,
+        uris: uris,
+      };
+      
+      setWalletAPI(newWalletAPI);
+      setHasConnected(true);
+      
+      // Check proof server status
+      await checkProofServerStatus(uris.proverServerUri);
+      toast.success("Reconnected successfully");
+      
+      logger?.info("Wallet reconnection successful");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to reconnect to wallet";
+      
+      logger?.error("Wallet reconnection failed", { error: errorMessage });
+      setError(errorMessage);
+      setHasConnected(false);
+      
+      // Clear the connection flag if reconnection fails
+      sessionStorage.removeItem("WALLET_CONNECTED");
+      sessionStorage.removeItem("WALLET_STATE");
+      
+      toast.error("Failed to reconnect wallet. Please connect manually.");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Enables user connect their wallet to the DAPP
+  const connect = async () => {
+    setIsConnecting(true);
+    setError(undefined);
+    logger?.info("Connecting to wallet....");
+    
+    try {
+      const { wallet, uris } = await connectWallet();
+      const connectedWalletState = await wallet.state();
+      
+      // Validate the wallet state
+      if (!connectedWalletState.address || !connectedWalletState.coinPublicKey) {
+        throw new Error("Invalid wallet state - missing required fields");
+      }
+
+      logger?.info("Wallet state", connectedWalletState);
+      
       const newWalletAPI = {
         address: connectedWalletState.address,
         coinPublicKey: connectedWalletState.coinPublicKey,
@@ -249,20 +298,28 @@ const MidnightWalletProvider = ({
         uris: uris,
       };
 
-      sessionStorage.setItem("WALLET_API", JSON.stringify(newWalletAPI));
       setWalletAPI(newWalletAPI);
-      // Checks if the proof server is active
+      setHasConnected(true);
+      
+      // Store connection state only after successful connection
+      sessionStorage.setItem("WALLET_CONNECTED", "true");
+      
+      // Check proof server status
       await checkProofServerStatus(uris.proverServerUri);
-
       toast.success("Connected successfully");
-      logger.info("Finished setting wallet api");
+      
+      logger?.info("Wallet connection successful");
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to connnect to  wallet";
+          : "Failed to connect to wallet";
+      
       setError(errorMessage);
       setHasConnected(false);
+      toast.error(errorMessage);
+      
+      logger?.error("Wallet connection failed", { error: errorMessage });
     } finally {
       setIsConnecting(false);
     }
@@ -271,7 +328,9 @@ const MidnightWalletProvider = ({
   // Sets the wallet state as soon as the walletAPI is available after connection
   useEffect(() => {
     if (!walletAPI) return;
-    logger.info("cached wallet api", walletAPI);
+    
+    logger?.info("Updating wallet state with API", walletAPI);
+    
     const newState: MidnightWalletState = {
       address: walletAPI.address,
       walletAPI: walletAPI,
@@ -290,9 +349,10 @@ const MidnightWalletProvider = ({
       },
     };
 
-    logger.info("Updated wallet status", newState);
-    sessionStorage.setItem("WALLET_STATE", JSON.stringify(newState));
     setWalletState(newState);
+    
+    // Store wallet state only after successful setup
+    sessionStorage.setItem("WALLET_STATE", JSON.stringify(newState));
 
     const newProviders = {
       privateStateProvider,
@@ -302,9 +362,9 @@ const MidnightWalletProvider = ({
       walletProvider,
       proofProvider,
     };
-    logger.info("Updated DAp providers", newProviders);
-
+    
     setProviders(newProviders);
+    logger?.info("Updated providers", newProviders);
   }, [
     walletAPI,
     hasConnected,
@@ -318,9 +378,14 @@ const MidnightWalletProvider = ({
     proofProvider,
   ]);
 
+  // Initiates wallet reconnection on component mount
+  useEffect(() => {
+    void reconnectToWalletAndProviders();
+  }, []); // Only run once on mount
+
   const contextWalletValue: MidnightWalletContextType = useMemo(
     () => ({
-      state: walletState as MidnightWalletState,
+      state: walletState,
       connectFn: connect,
       privateStateProvider,
       publicDataProvider,
@@ -343,6 +408,7 @@ const MidnightWalletProvider = ({
       proofProvider,
       isConnecting,
       hasConnected,
+      providers,
     ]
   );
 

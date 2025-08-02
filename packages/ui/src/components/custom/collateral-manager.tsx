@@ -107,10 +107,14 @@ export function CollateralManager() {
       if (tx?.public.status === "SucceedEntirely") {
         toast.success("Created vault successfully");
       } else {
-        toast.error("Failed to create vault");
+        toast.error(
+          action == "deposit" ? "Failed to create vault" : "Failed to withdraw"
+        );
       }
     } catch (error) {
-      toast.error("Failed to create vault");
+      const errMsg =
+        error instanceof Error ? error.message : "Transction failed";
+      toast.error(errMsg);
     } finally {
       action == "deposit" ? setIsDepositing(false) : setIsWithdrawing(false);
     }
@@ -362,7 +366,15 @@ export function CollateralManager() {
                     <Wallet className="w-5 h-5 text-cyan-400" />
                     Your Position
                   </div>
-                  <Badge variant="secondary">{depositPosition.depositor.position == DebtPositionStatus.inactive ? "Inactive" : (depositPosition.depositor.position == DebtPositionStatus.active ? "Active" : "Closed")}</Badge>
+                  <Badge variant="secondary">
+                    {depositPosition.depositor.position ==
+                    DebtPositionStatus.inactive
+                      ? "Inactive"
+                      : depositPosition.depositor.position ==
+                          DebtPositionStatus.active
+                        ? "Active"
+                        : "Closed"}
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">

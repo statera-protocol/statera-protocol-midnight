@@ -1,13 +1,14 @@
 import { Depositor, Staker } from "@statera/ada-statera-protocol";
 import { Logger } from "pino";
-import {parse as uuidParser} from "uuid"
 import { DerivedDepositor, DerivedReservedPoolTotal, DerivedStaker } from "./common-types.js";
+import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 export const randomNonceBytes = (length: number, logger?: Logger): Uint8Array => {
     const newBytes = new Uint8Array(length);
     crypto.getRandomValues(newBytes);
     logger?.info("Random nonce bytes", newBytes)
     return newBytes;
 }
+
 export function uint8arraytostring(array: Uint8Array): string {
   // Debug logging
   console.log('Converting array:', Array.from(array).map(b => b.toString(16).padStart(2, '0')).join(''));
@@ -90,6 +91,15 @@ export function createDerivedDepositorsArray(collateralDepositors: {
     id: key,
     depositor: depositor,
   }));
+}
+
+export function createDerivedAdminArray(admins: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(elem_0: Uint8Array): boolean;
+    [Symbol.iterator](): Iterator<Uint8Array>;
+}): Uint8Array[] {
+  return Array.from(admins);
 }
 
 

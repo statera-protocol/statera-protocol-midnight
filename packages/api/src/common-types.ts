@@ -43,6 +43,10 @@ export type DerivedStateraContractState = {
   readonly collateralDepositors: DerivedDepositor[];
   readonly stakers: DerivedStaker[];
   readonly noOfDepositors: bigint;
+  readonly admins: Uint8Array[];
+  readonly LVT: bigint;
+  readonly MCR: bigint;
+  readonly validCollateralType: Uint8Array;
 };
 
 export type DerivedDepositor = {
@@ -54,6 +58,8 @@ export type DerivedStaker = {
   id: Uint8Array;
   staker: Staker;
 };
+
+
 
 export type DerivedReservedPoolTotal = {
   id: string;

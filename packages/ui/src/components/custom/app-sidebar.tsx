@@ -11,6 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar"
+import useDeployment from "@/hookes/useDeployment"
 
 interface AppSidebarProps {
   activeSection: string
@@ -52,7 +53,8 @@ const menuItems = [
 ]
 
 export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps) {
-  // const filteredItems = menuItems.filter((item) => item.roles.includes(userRole))
+  const deploymentCTX = useDeployment();
+  const filteredItems = menuItems.filter((item) => item.roles.includes(deploymentCTX?.userRole as string))
 
   return (
     <Sidebar className="border-r border-slate-800/50 bg-slate-900/95 backdrop-blur-xl">
@@ -75,7 +77,7 @@ export function AppSidebar({ activeSection, setActiveSection }: AppSidebarProps)
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-2">
-              {menuItems.map((item) => (
+              {filteredItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     isActive={activeSection === item.id}

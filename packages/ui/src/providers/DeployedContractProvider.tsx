@@ -1,4 +1,7 @@
 import useMidnightWallet from "@/hookes/useMidnightWallet";
+import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import type { StateraPrivateState } from "@statera/ada-statera-protocol";
 import {
   StateraAPI,
@@ -16,6 +19,7 @@ import {
 import toast from "react-hot-toast";
 
 export interface DeploymentProvider {
+  readonly userRole: "admin" | "user";
   readonly privateState: StateraPrivateState | null;
   readonly isJoining: boolean;
   readonly error: string | null;
@@ -52,6 +56,7 @@ export const DeployedContractProvider = ({
   const [privateState, setPrivateState] = useState<StateraPrivateState | null>(
     null
   );
+  const [userRole, setUserRole] = useState<"admin" | "user">("user");
 
   // Use the custom hook instead of useContext directly
   const walletContext = useMidnightWallet();
@@ -68,7 +73,7 @@ export const DeployedContractProvider = ({
 
     if (!contractAddress) {
       setError("Contract address not configured");
-      toast.error(error);
+      toast.error("Contract address not configured");
       return;
     }
 
@@ -127,6 +132,27 @@ export const DeployedContractProvider = ({
     })();
   }, [walletContext?.privateStateProvider, contractState]);
 
+  useEffect(() => {
+    if (!contractState) return;
+
+    const walletAddressHex = parseCoinPublicKeyToHex(
+      walletContext?.state.coinPublicKey as string,
+      getZswapNetworkId()
+    );
+
+    const role =
+      decodeCoinPublicKey(contractState.super_admin) == walletAddressHex ||
+      contractState.admins.findIndex(
+        (admin) => decodeCoinPublicKey(admin) == walletAddressHex
+      ) != -1
+        ? "admin"
+        : "user";
+
+    console.log("USER ROLE:", role);
+
+    setUserRole(role);
+  }, [stateraApi, contractState]);
+
   const contextValue: DeploymentProvider = {
     isJoining,
     hasJoined,
@@ -136,6 +162,7 @@ export const DeployedContractProvider = ({
     clearError,
     contractState,
     privateState,
+    userRole
   };
 
   return (

@@ -120,6 +120,12 @@ export circuit addAdmin(address: Bytes<32>): []{
     admins.insert(disclose(address));
 }
 
+export circuit transferAdminRole(address: Bytes<32>): []{
+    assert (ownPublicKey().bytes == super_admin, "Can not add new admin: Unauthorized");
+
+    super_admin = disclose(address);
+}
+
 /* INTERACTIONS FOR COLLATERAL DEPOSITORS */
 
 export circuit depositToCollateralPool(coin: CoinInfo, _deposit_amt: Uint<64>): [] {

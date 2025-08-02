@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 import useMidnightWallet from "@/hookes/useMidnightWallet";
 import toast from "react-hot-toast";
+import { Badge } from "../ui/badge";
+import useDeployment from "@/hookes/useDeployment";
 
 
 export function DashboardHeader() {
   const walletUtils = useMidnightWallet();
+  const deploymentCTX = useDeployment();
 
   return (
     <header className="border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-xl">
@@ -52,16 +55,16 @@ export function DashboardHeader() {
             <Bell className="h-4 w-4" />
           </Button>
 
-          {/* <Badge
-            variant={userRole === "admin" ? "default" : "secondary"}
+          <Badge
+            variant={deploymentCTX?.userRole === "admin" ? "default" : "secondary"}
             className={
-              userRole === "admin"
+              deploymentCTX?.userRole === "admin"
                 ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
                 : "bg-slate-700 text-slate-300"
             }
           >
-            {userRole === "admin" ? "Admin" : "User"}
-          </Badge> */}
+            {deploymentCTX?.userRole === "admin" ? "Admin" : "User"}
+          </Badge>
 
           {walletUtils?.hasConnected ? (
             <DropdownMenu>
