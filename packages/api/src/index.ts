@@ -86,16 +86,12 @@ export interface DeployedStateraAPI {
     oraclePk: string
   ) => Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> 
 }
-/**
- * NB: Declaring a class implements a given type, means it must contain all defined properties and methods, then take on other extra properties or class
- */
+
 
 export class StateraAPI implements DeployedStateraAPI {
   deployedContractAddress: string;
   state: Observable<DerivedStateraContractState>;
 
-  // Within the constructor set the two properties of the API Class Object
-  // Using access modifiers on parameters create a property instances for that parameter and stores it as part of the object
   /**
    * @param allReadyDeployedContract
    * @param logger becomes accessible s if they were decleared as static properties as part of the class

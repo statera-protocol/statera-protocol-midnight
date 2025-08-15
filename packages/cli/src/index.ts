@@ -1,5 +1,3 @@
-// import { webcrypto } from "crypto";
-// import { WebSocket } from "ws"
 import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
 import { stdin as input, stdout as output } from "node:process";
 import {
@@ -52,7 +50,6 @@ import {
 import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
 import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config-provider";
 import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
-import * as fsAsync from "node:fs/promises";
 import * as fs from "node:fs";
 import { streamToString } from "testcontainers/build/common/streams.js";
 import { webcrypto } from "node:crypto";

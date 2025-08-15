@@ -11,11 +11,7 @@
 ## How to run the project locally
 **Pre-requisite**
 
-- Install compactc compiler (Guide): [https://docs.midnight.network/develop/tutorial/building/]#midnight-compact-compiler
-
-- Install proof server from midnight: [https://docs.midnight.network/develop/tutorial/using/proof-server]
-
-- Install prebaked proof server version (RECOMMENDED): [https://github.com/bricktowers/midnight-proof-server]
+- Install compactc compiler (Guide): [https://docs.midnight.network/develop/tutorial/building/#midnight-compact-compiler]
 
 - Lace wallet setup: [https://docs.midnight.network/develop/tutorial/using/chrome-ext]
 
@@ -58,11 +54,12 @@
     * Create a .env file in the root of the ui folder
     * Add these env variables, it is REQUIRED for the frontend to work 
     */
+    VITE_CONTRACT_ADDRESS=0200a03ee06ac2eb8a4cafe8490dc472e0943bf21d8baa4bec46405fd9ea9e89321a
     VITE_NETWORK_ID=TestNet
     VITE_LOGGING_LEVEL=trace
-    VITE_CONTRACT_ADDRESS=020099556574a5ada24fb9f772d4ef13df01056d8f5b9a67227bf9d0f4d52f803c5a
-    VITE_INDEXER_URL="https://indexer.testnet-02.midnight.network/api/v1/graphql"
-    VITE_INDEXER_WS_URL="wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws"
+    VITE_INDEXER_URL=https://indexer.testnet-02.midnight.network/api/v1/graphql
+    VITE_INDEXER_WS_URL=wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws
+    VITE_PROOF_SERVER_URI=http://13.53.62.251:6300/
 ```
 
 **Build and run the DApp**
