@@ -11,7 +11,7 @@
 ## How to run the project locally
 **Pre-requisite**
 
-- Install compactc compiler (Guide): [https://docs.midnight.network/develop/tutorial/building/]#midnight-compact-compiler
+- Install compactc compiler (Guide): [https://docs.midnight.network/develop/tutorial/building/#midnight-compact-compiler]
 
 - Lace wallet setup: [https://docs.midnight.network/develop/tutorial/using/chrome-ext]
 
