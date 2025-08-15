@@ -69,7 +69,6 @@
   },
   "packageManager": "yarn@4.9.2",
   "workspaces": [
-    "compact",
     "packages/ui",
     "packages/api",
     "packages/cli",

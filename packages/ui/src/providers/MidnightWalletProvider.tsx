@@ -75,6 +75,7 @@ export type MidnightWalletContextType = {
   zkConfigProvider: ZKConfigProvider<TokenCircuitKeys>;
   checkProofServerStatus: (uri: string) => Promise<void>;
   proofProvider: ProofProvider<string>;
+  disconnect: () => Promise<void>;
 };
 
 export const MidnightWalletContext =
@@ -182,8 +183,10 @@ const MidnightWalletProvider = ({
   }, [walletAPI]);
 
   const proofProvider = useMemo(() => {
-    if (walletAPI) {
-      return proofClient(walletAPI.uris.proverServerUri);
+    const proof_server_uri = import.meta.env.VITE_PROOF_SERVER_URI;
+    console.log("proof-server-uri", proof_server_uri);
+    if (walletAPI && proof_server_uri) {
+      return proofClient(proof_server_uri as string);
     } else {
       return noProofClient();
     }
@@ -229,14 +232,17 @@ const MidnightWalletProvider = ({
     try {
       const { wallet, uris } = await connectWallet();
       const connectedWalletState = await wallet.state();
-      
+
       // Validate the wallet state
-      if (!connectedWalletState.address || !connectedWalletState.coinPublicKey) {
+      if (
+        !connectedWalletState.address ||
+        !connectedWalletState.coinPublicKey
+      ) {
         throw new Error("Invalid wallet state - missing required fields");
       }
 
       logger?.info("Wallet state retrieved", connectedWalletState);
-      
+
       const newWalletAPI = {
         address: connectedWalletState.address,
         coinPublicKey: connectedWalletState.coinPublicKey,
@@ -244,29 +250,29 @@ const MidnightWalletProvider = ({
         wallet: wallet,
         uris: uris,
       };
-      
+
       setWalletAPI(newWalletAPI);
       setHasConnected(true);
-      
+
       // Check proof server status
       await checkProofServerStatus(uris.proverServerUri);
       toast.success("Reconnected successfully");
-      
+
       logger?.info("Wallet reconnection successful");
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Failed to reconnect to wallet";
-      
+
       logger?.error("Wallet reconnection failed", { error: errorMessage });
       setError(errorMessage);
       setHasConnected(false);
-      
+
       // Clear the connection flag if reconnection fails
       sessionStorage.removeItem("WALLET_CONNECTED");
       sessionStorage.removeItem("WALLET_STATE");
-      
+
       toast.error("Failed to reconnect wallet. Please connect manually.");
     } finally {
       setIsConnecting(false);
@@ -278,18 +284,27 @@ const MidnightWalletProvider = ({
     setIsConnecting(true);
     setError(undefined);
     logger?.info("Connecting to wallet....");
-    
+
     try {
       const { wallet, uris } = await connectWallet();
+      if (!wallet.state) {
+        toast.error(
+          "Could not find Lace wallet extension, Check to see if you have installed it on your Chrome browser"
+        );
+        return;
+      }
       const connectedWalletState = await wallet.state();
-      
+
       // Validate the wallet state
-      if (!connectedWalletState.address || !connectedWalletState.coinPublicKey) {
+      if (
+        !connectedWalletState.address ||
+        !connectedWalletState.coinPublicKey
+      ) {
         throw new Error("Invalid wallet state - missing required fields");
       }
 
       logger?.info("Wallet state", connectedWalletState);
-      
+
       const newWalletAPI = {
         address: connectedWalletState.address,
         coinPublicKey: connectedWalletState.coinPublicKey,
@@ -300,25 +315,24 @@ const MidnightWalletProvider = ({
 
       setWalletAPI(newWalletAPI);
       setHasConnected(true);
-      
+
       // Store connection state only after successful connection
       sessionStorage.setItem("WALLET_CONNECTED", "true");
-      
+
       // Check proof server status
-      await checkProofServerStatus(uris.proverServerUri);
+      const proof_server_uri = import.meta.env.VITE_PROOF_SERVER_URI;
+      await checkProofServerStatus(proof_server_uri && proof_server_uri);
       toast.success("Connected successfully");
-      
+
       logger?.info("Wallet connection successful");
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to connect to wallet";
-      
+        error instanceof Error ? error.message : "Failed to connect to wallet";
+
       setError(errorMessage);
       setHasConnected(false);
       toast.error(errorMessage);
-      
+
       logger?.error("Wallet connection failed", { error: errorMessage });
     } finally {
       setIsConnecting(false);
@@ -328,9 +342,9 @@ const MidnightWalletProvider = ({
   // Sets the wallet state as soon as the walletAPI is available after connection
   useEffect(() => {
     if (!walletAPI) return;
-    
+
     logger?.info("Updating wallet state with API", walletAPI);
-    
+
     const newState: MidnightWalletState = {
       address: walletAPI.address,
       walletAPI: walletAPI,
@@ -350,7 +364,7 @@ const MidnightWalletProvider = ({
     };
 
     setWalletState(newState);
-    
+
     // Store wallet state only after successful setup
     sessionStorage.setItem("WALLET_STATE", JSON.stringify(newState));
 
@@ -362,7 +376,7 @@ const MidnightWalletProvider = ({
       walletProvider,
       proofProvider,
     };
-    
+
     setProviders(newProviders);
     logger?.info("Updated providers", newProviders);
   }, [
@@ -377,6 +391,22 @@ const MidnightWalletProvider = ({
     zkConfigProvider,
     proofProvider,
   ]);
+
+  const disconnect = async () => {
+    sessionStorage.removeItem("WALLET_STATE");
+    sessionStorage.removeItem("WALLET_CONNECTED");
+    setWalletAPI(undefined);
+    setWalletState({
+      address: undefined,
+      isConnecting: false,
+      hasConnected: false,
+      coinPublicKey: undefined,
+      encryptionPublicKey: undefined,
+      providers: undefined,
+      walletAPI: undefined,
+      error: null,
+    });
+  };
 
   // Initiates wallet reconnection on component mount
   useEffect(() => {
@@ -396,6 +426,7 @@ const MidnightWalletProvider = ({
       isConnecting,
       hasConnected,
       providers,
+      disconnect,
       checkProofServerStatus: checkProofServerStatus,
     }),
     [

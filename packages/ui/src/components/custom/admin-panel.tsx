@@ -19,11 +19,16 @@ import useMidnightWallet from "@/hookes/useMidnightWallet";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import toast from "react-hot-toast";
 import ContractUpdateTab from "./update-tab";
-import DeploymentBoard from "./deployment-tab";
 import OrganizationTab from "./organization-tab";
 import { DebtPositionStatus } from "@statera/ada-statera-protocol";
 
-export type AdminActions = "setSUSDType" | "add" | "update" | "transfer";
+export type AdminActions =
+  | "setSUSDType"
+  | "add"
+  | "update"
+  | "transfer"
+  | "add_oracle"
+  | "remove_oracle";
 export type UpdatePayload = {
   MCR: number;
   liquidation_threshold: number;
@@ -80,6 +85,26 @@ export function AdminPanel() {
             txResult = await deploymentUtils.stateraApi.addAdmin(
               parseCoinPublicKeyToHex(payload, getZswapNetworkId())
             );
+          } else {
+            throw new Error("Invalid payload for add action: expected string");
+          }
+          break;
+        }
+
+        case "remove_oracle": {
+          if (typeof payload === "string") {
+            txResult =
+              await deploymentUtils.stateraApi.addTrustedOracle(payload);
+          } else {
+            throw new Error("Invalid payload for add action: expected string");
+          }
+          break;
+        }
+
+        case "add_oracle": {
+          if (typeof payload === "string") {
+            txResult =
+              await deploymentUtils.stateraApi.removeTrustedOracle(payload);
           } else {
             throw new Error("Invalid payload for add action: expected string");
           }
@@ -188,7 +213,9 @@ export function AdminPanel() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{deploymentUtils.contractState.liquidationCount}</div>
+            <div className="text-2xl font-bold text-white">
+              {deploymentUtils.contractState.liquidationCount}
+            </div>
             <p className="text-xs text-muted-foreground text-slate-400">
               <span className="text-green-600">{12}</span> from last month
             </p>
@@ -204,7 +231,7 @@ export function AdminPanel() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              ${deploymentUtils.contractState.reservePoolTotal.value}
+              {deploymentUtils.contractState.reservePoolTotal.value / BigInt(1_000_000)} tDUST
             </div>
             <p className="text-xs text-muted-foreground text-slate-400">
               <span className="text-green-600">{12}</span> from last month
@@ -224,7 +251,7 @@ export function AdminPanel() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="organization" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-700/50">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
                   <TabsTrigger
                     value="organization"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
@@ -237,12 +264,12 @@ export function AdminPanel() {
                   >
                     Parameters
                   </TabsTrigger>
-                  <TabsTrigger
+                  {/* <TabsTrigger
                     value="contract managment"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
                   >
                     Contract Managment
-                  </TabsTrigger>
+                  </TabsTrigger> */}
                 </TabsList>
 
                 <OrganizationTab
@@ -252,9 +279,9 @@ export function AdminPanel() {
                 <ContractUpdateTab
                   handleAdminFunctionality={handleAdminFunctionality}
                 />
-                <DeploymentBoard
+                {/* <DeploymentBoard
                   handleAdminFunctionality={handleAdminFunctionality}
-                />
+                /> */}
               </Tabs>
             </CardContent>
           </Card>

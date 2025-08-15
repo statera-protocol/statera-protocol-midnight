@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "compact": "run-compactc src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
+    "compact": "compact compile src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",

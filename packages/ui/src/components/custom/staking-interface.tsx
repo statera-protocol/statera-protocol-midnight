@@ -13,13 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Shield, Gift, Clock, Loader2, Wallet } from "lucide-react";
+import { TrendingUp, Shield, Gift, Clock, Loader2, Wallet, AlertTriangle } from "lucide-react";
 import useDeployment from "@/hookes/useDeployment";
 import toast from "react-hot-toast";
 import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import useMidnightWallet from "@/hookes/useMidnightWallet";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { Alert, AlertDescription } from "../ui/alert";
 
 type StakersActions = "stake" | "unstake" | "check" | "withdraw";
 
@@ -32,6 +33,7 @@ export function StakingInterface() {
   const [checking, setChecking] = useState(false);
   const deploymentCTX = useDeployment();
   const walletCtx = useMidnightWallet();
+  const minStakeAmount = 2;
 
   const stakePosition =
     walletCtx &&
@@ -91,6 +93,15 @@ export function StakingInterface() {
     }
   };
 
+  if (!deploymentCTX?.contractState) {
+    return (
+      <div className="flex flex-col justify-center items-center h-96">
+        <Loader2 className="animate-spin w-24 h-24 text-blue-500" />
+        <p className="text-lg text-slate-400 py-4">Just a moment</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -138,16 +149,13 @@ export function StakingInterface() {
                       />
                       <Button variant="outline">sUSD</Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Available: 2,500 sUSD
-                    </p>
                   </div>
 
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setStakeAmount("1")}
+                      onClick={() => setStakeAmount("2")}
                     >
                       25%
                     </Button>
@@ -188,16 +196,22 @@ export function StakingInterface() {
                     </ul>
                   </div>
 
+                  {parseInt(stakeAmount) <
+                    minStakeAmount && (
+                    <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-800 dark:text-red-200">
+                        Min. allowed stake amount is 2 sUSD
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Separator />
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Stake Amount</span>
                       <span>{stakeAmount || "0"} sUSD</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Lock Period</span>
-                      <span>7 days</span>
                     </div>
                   </div>
 
@@ -210,7 +224,7 @@ export function StakingInterface() {
                       )
                     }
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
-                    disabled={!stakeAmount}
+                    disabled={ !stakeAmount.length || parseInt(stakeAmount) < minStakeAmount}
                   >
                     {isStaking ? (
                       <div className="flex items-center gap-2">
@@ -236,10 +250,11 @@ export function StakingInterface() {
                         value={unstakeAmount}
                         onChange={(e) => setUnstakeAmount(e.target.value)}
                       />
-                      <Button variant="outline">sUSD</Button>
+                      <Button>sUSD</Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Staked: 7,500 sUSD
+                      Staked: {stakePosition?.staker.effective_user_balance || 0}{" "}
+                      sUSD
                     </p>
                   </div>
 
@@ -256,6 +271,16 @@ export function StakingInterface() {
                     </p>
                   </div>
 
+                  {stakePosition && parseInt(unstakeAmount) >
+                    stakePosition?.staker.effective_user_balance && (
+                    <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-800 dark:text-red-200">
+                        Min. allowed stake amount is 2 sUSD
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Button
                     onClick={() =>
                       handleStakeInteraction(
@@ -265,7 +290,13 @@ export function StakingInterface() {
                       )
                     }
                     className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
-                    disabled={!unstakeAmount}
+                    disabled={
+                      !stakePosition
+                        ? false
+                        : parseInt(unstakeAmount) >
+                          stakePosition.staker.effective_user_balance
+                    }
+                    variant="outline"
                   >
                     {isUnstaking ? (
                       <div className="flex items-center gap-2">
@@ -283,60 +314,6 @@ export function StakingInterface() {
               </Tabs>
             </CardContent>
           </Card>
-
-          {/* <Card className="mt-6 bg-slate-800/50 dark:bg-zinc-900/50 backdrop-blur-sm border-slate-200 dark:border-zinc-800">
-            <CardHeader>
-              <CardTitle>Staking Pools</CardTitle>
-              <CardDescription>
-                Choose from different staking options
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {stakingPools.map((pool, index) => (
-                  <div
-                    key={index}
-                    className="border border-slate-200 dark:border-zinc-700 bg-transparent dark:bg-zinc-800/50 rounded-lg p-4 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium">{pool.name}</h3>
-                      <Badge
-                        variant={pool.risk === "Low" ? "secondary" : "outline"}
-                      >
-                        {pool.risk} Risk
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">APY</p>
-                        <p className="font-medium text-green-600">{pool.apy}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">TVL</p>
-                        <p className="font-medium">{pool.tvl}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Your Stake</p>
-                        <p className="font-medium">
-                          {(stakePosition &&
-                            stakePosition.staker.stake_reward) ||
-                            0}{" "}
-                          sUSD
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Rewards</p>
-                        <p className="font-medium text-green-600">
-                          {pool.rewards} sUSD
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card> */}
         </div>
 
         <div className="space-y-6">

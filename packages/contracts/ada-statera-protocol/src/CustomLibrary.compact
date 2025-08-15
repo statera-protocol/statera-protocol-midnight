@@ -1,11 +1,33 @@
 module CustomLibrary {
     import CompactStandardLibrary;
-    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata, generateAdminId};
+    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata, generateAdminId, ComplianceToken, KYCTokenData, ValidityRange};
     
     /* Structure for Private state */
     struct MintMetadata {
         collateral: Uint<64>;
         debt: Uint<64>;
+    }
+
+    struct KYCTokenData {
+        // User's DID identifier
+        did: Bytes<32>;
+        // User's PublicKey
+        userPk: Bytes<32>;
+        // Oracle public key
+        oraclePk: Bytes<32>;
+        // Validity range for the token
+        validityRange: ValidityRange;
+    }
+
+    struct ValidityRange {
+        duration: Uint<64>;
+        creationDate: Uint<64>;
+    }
+
+    struct ComplianceToken {
+        tokenData: KYCTokenData;
+        // Signature from oracle to verify authenticity of the token
+        oracleSignature: Bytes<32>;
     }
 
     witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];

@@ -2,7 +2,12 @@ import { TabsContent } from "../ui/tabs";
 import { Label } from "@radix-ui/react-label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Loader2, Settings } from "lucide-react";
+import {
+  Delete,
+  Loader2,
+  PlusSquareIcon,
+  Settings,
+} from "lucide-react";
 import type { AdminActions, AdminPayload } from "./admin-panel";
 import { useState } from "react";
 import useDeployment from "@/hookes/useDeployment";
@@ -23,6 +28,9 @@ const ContractUpdateTab = ({
   const [liquidationThreshold, setLiquidationThreshold] = useState("");
   const [LVT, setLVT] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [oraclePk, setOraclePk] = useState("");
 
   const deploymentUtils = useDeployment();
 
@@ -33,7 +41,9 @@ const ContractUpdateTab = ({
 
   // Helper function to validate numeric input
   const isValidNumericInput = (value: string): boolean => {
-    return value.trim().length > 0 && !isNaN(Number(value)) && Number(value) > 0;
+    return (
+      value.trim().length > 0 && !isNaN(Number(value)) && Number(value) > 0
+    );
   };
 
   // Check if all fields are valid
@@ -47,7 +57,7 @@ const ContractUpdateTab = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate all fields before submission
     if (!areAllFieldsValid()) {
       toast.error("All fields are required and must be valid positive numbers");
@@ -165,6 +175,57 @@ const ContractUpdateTab = ({
           )}
         </Button>
       </form>
+      <div className="flex flex-col gap-3">
+        <h2 className="text-xl text-slate-200 pt-4">Update Trusted Oracles</h2>
+        <Label className="text-slate-300">Add new trusted oracle</Label>
+        <Input
+          required
+          onChange={(e) => setOraclePk(e.target.value.trim())}
+          placeholder="12.5"
+          className="bg-slate-700/50 border-slate-600 t ext-white placeholder:text-slate-400"
+        />
+
+        <div className="flex items-center gap-4">
+          <Button
+            disabled={!oraclePk.length}
+            onClick={() =>
+              handleAdminFunctionality("add_oracle", setIsAdding, oraclePk)
+            }
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+          >
+            {isAdding ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Adding
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <PlusSquareIcon className="w-4 h-4" />
+                Add Oracle
+              </div>
+            )}
+          </Button>
+          <Button
+            disabled={!oraclePk.length}
+            onClick={() =>
+              handleAdminFunctionality("remove_oracle", setIsRemoving, oraclePk)
+            }
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
+          >
+            {isRemoving ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Removing...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Delete className="w-4 h-4" />
+                Remove Oracle
+              </div>
+            )}
+          </Button>
+        </div>
+      </div>
     </TabsContent>
   );
 };

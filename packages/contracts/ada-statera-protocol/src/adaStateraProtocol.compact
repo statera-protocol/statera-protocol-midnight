@@ -2,7 +2,7 @@ pragma language_version >= 0.16.0;
 
 import CompactStandardLibrary;
 import "./CustomLibrary";
-export {CoinInfo, MintMetadata, Depositor, Staker, DebtPositionStatus};
+export {CoinInfo, MintMetadata, Depositor, Staker, DebtPositionStatus, ComplianceToken, KYCTokenData, ValidityRange, ComplianceToken};
 
 /* Describes the status of a user's debt position */
 enum DebtPositionStatus { inactive, active, closed };
@@ -32,6 +32,9 @@ export ledger admins: Set<Bytes<32>>;
 
 /* Mapping for collateral deposit  --> encodedPk -> Depositor */
 export ledger depositors: Map<Bytes<32>, Depositor>;
+
+/* Tracks the list of trustd kyc oracle networks */
+export ledger trustedOracles: Set<Bytes<32>>;
 
 /* Mapping for stakers --> addrs -> Staker */
 export ledger stakers: Map<Bytes<32>, Staker>;
@@ -113,6 +116,20 @@ export circuit setSUSDTokenType(): []{
     sUSDTokenType = tokenType(pad(32, "sUSD_token"), kernel.self());
 }
 
+export circuit addTrustedOracle(oraclePk: Bytes<32>): []{
+    const disclosedOraclePk = disclose(oraclePk);
+    assert (!trustedOracles.member(disclosedOraclePk), "Can not add oracle pk: Already exist");
+
+    trustedOracles.insert(disclosedOraclePk);
+}
+
+export circuit removeTrustedOraclePk(oraclePk: Bytes<32>): []{
+    const disclosedOraclePk = disclose(oraclePk);
+    assert (trustedOracles.member(disclosedOraclePk), "Can not add oracle public key: Does not exist");
+
+    trustedOracles.remove(disclosedOraclePk);
+}
+
 
 export circuit addAdmin(address: Bytes<32>): []{
     assert (ownPublicKey().bytes == super_admin, "Can not add new admin: Unauthorized");
@@ -129,16 +146,18 @@ export circuit transferAdminRole(address: Bytes<32>): []{
 
 /* INTERACTIONS FOR COLLATERAL DEPOSITORS */
 
-export circuit depositToCollateralPool(coin: CoinInfo, _deposit_amt: Uint<64>): [] {
+export circuit depositToCollateralPool(coin: CoinInfo, _deposit_amt: Uint<64>, _compliance_token: ComplianceToken): [] {
     assert (coin.color == validCollateralAssetType, "Invalid token type provided: Can not create collateral position");
     
     const disclosed_amount = disclose(_deposit_amt);
     const disclosedCoin = disclose(coin);
     const disclosedCoinColor = disclose(coin.color);
     const depositId = ownPublicKey().bytes;
+    const disclosedComplianceToken = disclose(_compliance_token);
     
     const amount_in_speck = disclosed_amount * SPECK_per_tDUST;
     assert (coin.value >= amount_in_speck, "Insufficient funds provided");
+    assert (trustedOracles.member(disclosedComplianceToken.tokenData.oraclePk), "Can not create position: Unauthorized KYC provider");
 
     /* Receives coin */
     receive(disclosedCoin);

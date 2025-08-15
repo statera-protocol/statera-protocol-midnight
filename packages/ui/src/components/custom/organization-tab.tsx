@@ -114,6 +114,7 @@ const OrganizationTab = ({isSuperAdmin, handleAdminFunctionality}: OrganizationT
           />
           <div className="flex gap-2">
             <Button
+              disabled={!newAdmin.length}
               onClick={() => {
                 if (newAdmin.length < 77)
                   toast.error("Invalid coin public key provided");
