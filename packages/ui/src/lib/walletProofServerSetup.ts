@@ -1,0 +1,1 @@
+export const proof_servers = ["http://13.53.62.251:6300/", "http://51.20.55.91:6300/"];

@@ -27,6 +27,7 @@ import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { DebtPositionStatus } from "@statera/ada-statera-protocol";
+import { Alert, AlertDescription } from "../ui/alert";
 
 export function CollateralManager() {
   const [depositAmount, setDepositAmount] = useState("");
@@ -35,6 +36,7 @@ export function CollateralManager() {
   const walletContext = useMidnightWallet();
   const [isDepositing, setIsDepositing] = useState<boolean>(false);
   const [isWithdrawing, setIsWithdrawing] = useState<boolean>(false);
+  const minDeposit = 1;
 
   const collateralTypes = [
     {
@@ -119,6 +121,15 @@ export function CollateralManager() {
       action == "deposit" ? setIsDepositing(false) : setIsWithdrawing(false);
     }
   };
+
+  if (!deploymentCTX?.contractState || !deploymentCTX.privateState) {
+    return (
+      <div className="flex flex-col justify-center items-center h-96">
+        <Loader2 className="animate-spin w-24 h-24 text-blue-500" />
+        <p className="text-lg text-slate-400 py-4">Just a moment</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -224,6 +235,15 @@ export function CollateralManager() {
                       </Button>
                     </div>
 
+                    {parseInt(depositAmount) <= minDeposit && (
+                      <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <AlertDescription className="text-red-800 dark:text-red-200">
+                          Min. Deposit must be be above 1tDUST
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     <Separator className="bg-slate-700/50" />
 
                     <div className="space-y-3 p-4 bg-slate-700/20 rounded-lg border border-slate-600/30">
@@ -233,35 +253,11 @@ export function CollateralManager() {
                           {depositAmount || "0"} tDUST
                         </span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-300">USD Value</span>
-                        <span className="text-white font-medium">
-                          $
-                          {depositAmount
-                            ? (
-                                Number.parseFloat(depositAmount) * 20
-                              ).toLocaleString()
-                            : "0"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-300">
-                          New Health Factor
-                        </span>
-                        <span className="text-green-400 font-medium">
-                          {depositAmount
-                            ? Math.round(
-                                165 + Number.parseFloat(depositAmount) * 5
-                              )
-                            : 165}
-                          %
-                        </span>
-                      </div>
                     </div>
 
                     <Button
                       className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
-                      disabled={!depositAmount}
+                      disabled={parseInt(depositAmount) < minDeposit}
                       onClick={() =>
                         handleCreateOrWithdrawFromPosition(
                           Number(depositAmount),
@@ -312,6 +308,18 @@ export function CollateralManager() {
                     </p>
                   </div>
 
+                  {parseInt(withdrawAmount) >
+                    deploymentCTX?.privateState?.mint_metadata.collateral && (
+                    <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-800 dark:text-red-200">
+                        Can not withdraw more than available collateral:{" "}
+                        {deploymentCTX?.privateState?.mint_metadata.collateral}{" "}
+                        tDUST
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="bg-yellow-900/20 border border-yellow-500/30 p-3 rounded-lg">
                     <div className="flex items-center gap-2 text-yellow-400">
                       <AlertTriangle className="w-4 h-4" />
@@ -327,7 +335,10 @@ export function CollateralManager() {
 
                   <Button
                     className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-0"
-                    disabled={!withdrawAmount}
+                    disabled={
+                      parseInt(withdrawAmount) >
+                      deploymentCTX?.privateState?.mint_metadata.collateral
+                    }
                     onClick={() =>
                       handleCreateOrWithdrawFromPosition(
                         parseInt(withdrawAmount),

@@ -74,8 +74,9 @@ export function Overview() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
+      <div className="flex flex-col justify-center items-center h-96">
+        <Loader2 className="animate-spin w-24 h-24 text-blue-500" />
+        <p className="text-lg text-slate-400 py-4">Just a moment</p>
       </div>
     );
   }

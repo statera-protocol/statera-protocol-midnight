@@ -18,7 +18,10 @@ import {
   ledger,
   StateraPrivateState,
 } from "@statera/ada-statera-protocol";
-import { parseCoinPublicKeyToHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
+import {
+  parseCoinPublicKeyToHex,
+  toHex,
+} from "@midnight-ntwrk/midnight-js-utils";
 import { type Config, StandaloneConfig } from "./config.js";
 import {
   getLedgerNetworkId,
@@ -145,11 +148,14 @@ const displayDerivedLedgerState = async (
   currentState: DerivedStateraContractState,
   logger: Logger
 ): Promise<void> => {
-  logger.info(`Current admin is: ${utils.uint8arraytostring(currentState.super_admin)}`);
+  logger.info(
+    `Current admin is: ${utils.uint8arraytostring(currentState.super_admin)}`
+  );
   console.log(
     `Current collateral pool amount is:`,
     currentState.reservePoolTotal.value
   );
+  console.log(`Current trusted oracles:`, currentState);
   console.log(`Current total value minted is:`, currentState.totalMint);
   console.log(`Current nonce is:`, currentState.nonce);
   console.log(`Current depositor is:`, currentState.collateralDepositors);
@@ -179,10 +185,7 @@ const displayUserPrivateState = async (
 
   if (privateState === null)
     logger.info(`There is no private state stored at ${stateraPrivateStateId}`);
-  console.log(
-    `Current collateral reserved is:`,
-    privateState?.mint_metadata
-  );
+  console.log(`Current collateral reserved is:`, privateState?.mint_metadata);
   logger.info(`Current secrete-key is: ${privateState?.secrete_key}`);
 };
 
@@ -205,6 +208,8 @@ You can do one of the following:
   14. Liquidate collateral position (LIQUIDATOR ONLY)
   15. Withdraw your stake balance (STAKERS ONLY)
   16. Transfer super admin role (STAKERS ONLY)
+  17. Add new kyc oracle pk (ADMIN ONLY)
+  18. Remove kyc oracle pk (ADMIN ONLY)
 
 Which would you like to do? `;
 
@@ -238,9 +243,7 @@ const circuit_main_loop = async (
           const amountToDeposit = await rli.question(
             `How much do you want to deposit?`
           );
-          await stateraApi.depositToCollateralPool(
-            Number(amountToDeposit),
-          );
+          await stateraApi.depositToCollateralPool(Number(amountToDeposit));
 
           // Wait for wallet to sync after deposit
           logger.info("Waiting for wallet to sync after collateral deposit...");
@@ -320,7 +323,7 @@ const circuit_main_loop = async (
           await stateraApi.repay(
             Number(
               await rli.question("How much of your debt do you want to offset:")
-            ),
+            )
           );
 
           // Wait for wallet to sync after repayment
@@ -395,8 +398,8 @@ const circuit_main_loop = async (
               "Enter ID of collateral position you want to liquidate: "
             ),
             providers
-          )
-          
+          );
+
           logger.info("Liquidating collateral...");
           // Wait for wallet to sync after withdrawal
           logger.info(
@@ -426,17 +429,42 @@ const circuit_main_loop = async (
         }
 
         case "16": {
-          const addrss = await rli.question("Enter coin public key of the new super admin: ")
+          const addrss = await rli.question(
+            "Enter coin public key of the new super admin: "
+          );
           await stateraApi.transferSuperAdminRole(
-              parseCoinPublicKeyToHex(
-                addrss,
-                getZswapNetworkId()
-              )
+            parseCoinPublicKeyToHex(addrss, getZswapNetworkId())
           );
 
           // Wait for wallet to sync after withdrawal
           logger.info(
             "Waiting for wallet to sync after transfering super admin role..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+
+        case "17": {
+          const addrss = await rli.question("Enter new oracle public key: ");
+          await stateraApi.addTrustedOracle(addrss);
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after adding new oracle pk..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+
+        case "18": {
+          const addrss = await rli.question("Enter oracle public key to remove: ");
+          await stateraApi.removeTrustedOracle(addrss);
+
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after removing oracle pk..."
           );
           await waitForWalletSyncAfterOperation(wallet, logger);
           await displayComprehensiveWalletState(wallet, currentState, logger);
@@ -842,12 +870,7 @@ export const buildFreshWallet = async (
   config: Config,
   logger: Logger
 ): Promise<Wallet & Resource> =>
-  await buildWalletAndWaitForFunds(
-    config,
-    toHex(randomBytes(32)),
-    "",
-    logger
-  );
+  await buildWalletAndWaitForFunds(config, toHex(randomBytes(32)), "", logger);
 
 // Prompt for a seed and create the wallet with that.
 const buildWalletFromSeed = async (

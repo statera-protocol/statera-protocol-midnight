@@ -65,10 +65,26 @@ export interface DeployedStateraAPI {
   checkStakeReward: () => Promise<
     FinalizedCallTxData<StateraContract, "checkStakeReward">
   >;
-  reset: (liquidation_threshold: number, LVT: number, MCR: number) => Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">>;
-  addAdmin: (addrs: string) => Promise<FinalizedCallTxData<StateraContract, "addAdmin">>;
-  setSUSDColor: () => Promise<FinalizedCallTxData<StateraContract, "setSUSDTokenType">>;
-  transferSuperAdminRole: (addrs: string) => Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">>
+  reset: (
+    liquidation_threshold: number,
+    LVT: number,
+    MCR: number
+  ) => Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">>;
+  addAdmin: (
+    addrs: string
+  ) => Promise<FinalizedCallTxData<StateraContract, "addAdmin">>;
+  setSUSDColor: () => Promise<
+    FinalizedCallTxData<StateraContract, "setSUSDTokenType">
+  >;
+  transferSuperAdminRole: (
+    addrs: string
+  ) => Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">>;
+  addTrustedOracle: (
+    oraclePk: string
+  ) => Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">>; 
+  removeTrustedOracle: (
+    oraclePk: string
+  ) => Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> 
 }
 /**
  * NB: Declaring a class implements a given type, means it must contain all defined properties and methods, then take on other extra properties or class
@@ -134,7 +150,8 @@ export class StateraAPI implements DeployedStateraAPI {
           LVT: ledgerState.LVT,
           MCR: ledgerState.MCR,
           liquidationCount: ledgerState.liquidationCount,
-          validCollateralType: ledgerState.validCollateralAssetType
+          validCollateralType: ledgerState.validCollateralAssetType,
+          trustedOracles: utils.createDerivedOraclesArray(ledgerState.trustedOracles)
         };
       }
     );
@@ -232,7 +249,8 @@ export class StateraAPI implements DeployedStateraAPI {
     const txData =
       await this.allReadyDeployedContract.callTx.depositToCollateralPool(
         this.coin(deposit_unit_specks),
-        BigInt(amount)
+        BigInt(amount),
+        utils.getTestComplianceToken()
       );
 
     this.logger?.trace("Collateral Deposit was successful", {
@@ -273,7 +291,9 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async setSUSDColor(): Promise<FinalizedCallTxData<StateraContract, "setSUSDTokenType">> {
+  async setSUSDColor(): Promise<
+    FinalizedCallTxData<StateraContract, "setSUSDTokenType">
+  > {
     const txData =
       await this.allReadyDeployedContract.callTx.setSUSDTokenType();
 
@@ -291,7 +311,11 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async reset(liquidation_threshold: number, LVT: number, MCR: number): Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">> {
+  async reset(
+    liquidation_threshold: number,
+    LVT: number,
+    MCR: number
+  ): Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">> {
     const txData =
       await this.allReadyDeployedContract.callTx.resetProtocolConfig(
         BigInt(liquidation_threshold),
@@ -313,9 +337,12 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async addAdmin(addrs: string): Promise<FinalizedCallTxData<StateraContract, "addAdmin">> {
-    const txData =
-      await this.allReadyDeployedContract.callTx.addAdmin(encodeCoinPublicKey(addrs));
+  async addAdmin(
+    addrs: string
+  ): Promise<FinalizedCallTxData<StateraContract, "addAdmin">> {
+    const txData = await this.allReadyDeployedContract.callTx.addAdmin(
+      encodeCoinPublicKey(addrs)
+    );
 
     this.logger?.trace({
       transactionAdded: {
@@ -331,9 +358,54 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async transferSuperAdminRole(addrs: string): Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">> {
-    const txData =
-      await this.allReadyDeployedContract.callTx.transferAdminRole(encodeCoinPublicKey(addrs));
+  async addTrustedOracle(
+    oraclePk: string
+  ): Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">> {
+    const txData = await this.allReadyDeployedContract.callTx.addTrustedOracle(
+      utils.hexStringToUint8Array(oraclePk)
+    );
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "addAdmin",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+    return txData;
+  }
+
+  async removeTrustedOracle(
+    oraclePk: string
+  ): Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> {
+    const txData = await this.allReadyDeployedContract.callTx.removeTrustedOraclePk(
+      utils.hexStringToUint8Array(oraclePk)
+    );
+
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "addAdmin",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+    return txData;
+  }
+
+  async transferSuperAdminRole(
+    addrs: string
+  ): Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">> {
+    const txData = await this.allReadyDeployedContract.callTx.transferAdminRole(
+      encodeCoinPublicKey(addrs)
+    );
 
     this.logger?.trace({
       transactionAdded: {

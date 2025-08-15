@@ -48,6 +48,7 @@ export type DerivedStateraContractState = {
   readonly MCR: bigint;
   readonly liquidationCount: bigint;
   readonly validCollateralType: Uint8Array;
+  readonly trustedOracles: DerivedTrustedOracle[];
 };
 
 export type DerivedDepositor = {
@@ -60,7 +61,10 @@ export type DerivedStaker = {
   staker: Staker;
 };
 
-
+export type DerivedTrustedOracle = {
+  id: bigint;
+  oraclePk: string;
+};
 
 export type DerivedReservedPoolTotal = {
   id: string;

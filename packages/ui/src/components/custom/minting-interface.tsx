@@ -70,6 +70,7 @@ export function MintingInterface() {
     }
   };
 
+  
   const handleMintOrRepaySUSD = async (
     amount: number,
     action: "mint" | "repay"
@@ -110,6 +111,16 @@ export function MintingInterface() {
       action == "mint" ? setIsMinting(false) : setIsRepaying(false);
     }
   };
+
+
+  if (!deploymentCTX?.contractState || !deploymentCTX.privateState) {
+    return (
+      <div className="flex flex-col justify-center items-center h-96">
+        <Loader2 className="animate-spin w-24 h-24 text-blue-500" />
+        <p className="text-lg text-slate-400 py-4">Just a moment</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -215,17 +226,16 @@ export function MintingInterface() {
                     </Button>
                   </div>
 
-                  {mintAmount &&
-                    (calculateHealthFactor(mintAmount, "mint") as number) <
-                      minHFator && (
-                      <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
-                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                        <AlertDescription className="text-red-800 dark:text-red-200">
-                          This transaction would put your position below the
-                          minimum health factor {minHFator}
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                  {parseInt(mintAmount) >
+                    Number(mintPosition?.depositor.borrowLimit) && (
+                    <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+                      <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <AlertDescription className="text-red-800 dark:text-red-200">
+                        This transaction would put your position below the
+                        minimum health factor {minHFator}
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   <Separator />
 
