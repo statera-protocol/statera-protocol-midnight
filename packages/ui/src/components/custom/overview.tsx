@@ -7,6 +7,12 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import useDeployment from "@/hookes/useDeployment";
+import useMidnightWallet from "@/hookes/useMidnightWallet";
+import ClientSideLiquidationBot from "@/lib/client-side-liquidation-bot";
+import { encodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
+import type { MintMetadata } from "@statera/ada-statera-protocol";
 import { TrendingUp, DollarSign, Activity, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -21,6 +27,8 @@ type OverviewBoarState = {
 
 export function Overview() {
   const deploymentCtx = useDeployment();
+  const walletCtx = useMidnightWallet();
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [boardState, setBoardState] = useState<OverviewBoarState | undefined>(
     undefined
@@ -53,6 +61,7 @@ export function Overview() {
       try {
         await deploymentCtx?.onJoinContract();
         setIsLoading(false);
+
       } catch (error) {
         setIsLoading(false);
         const errMsg =
@@ -69,7 +78,26 @@ export function Overview() {
       setBoardState(value)
     );
 
-    return () => subscritption?.unsubscribe();
+    // Intialize client-side liquidation monitoring bot
+    const bot = new ClientSideLiquidationBot(
+      import.meta.env.VITE_SERVER_SIDE_BOT_CONNECTION_URL,
+      deploymentCtx?.privateState?.mint_metadata as MintMetadata,
+      Number(deploymentCtx?.contractState?.liquidationThreshold),
+      encodeCoinPublicKey(
+        parseCoinPublicKeyToHex(
+          walletCtx?.state.coinPublicKey as string,
+          getZswapNetworkId()
+        )
+      )
+    );
+  
+    //Start monitoring
+    bot.startMonitoring();
+
+    return () => {
+      subscritption?.unsubscribe()
+      bot.stopMonitoring()
+    };
   }, [deploymentCtx?.stateraApi]);
 
   if (isLoading) {
@@ -103,7 +131,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                `${(Number(deploymentCtx?.contractState?.reservePoolTotal.value)/ 1_000_000)} tDUST`
+                `${Number(deploymentCtx?.contractState?.reservePoolTotal.value) / 1_000_000} tDUST`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}
@@ -115,7 +143,7 @@ export function Overview() {
             </div>
           </CardContent>
         </Card>
-        <Card 
+        <Card
           className={`relative overflow-hidden backdrop-blur-xl border bg-gradient-to-br from-cyan-900/20 to-blue-900/20 border-cyan-500/30 shadow-lg shadow-cyan-500/10`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -248,7 +276,9 @@ export function Overview() {
                         <p className="text-xs text-slate-500">{value}</p>
                       </div>
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium text-slate-400">0x1453378</p>
+                        <p className="text-sm font-medium text-slate-400">
+                          0x1453378
+                        </p>
                         <p className="text-xs text-slate-400">2mins</p>
                       </div>
                     </div>

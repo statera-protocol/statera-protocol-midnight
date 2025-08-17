@@ -3,6 +3,7 @@ import { Label } from "@radix-ui/react-label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import {
+  CoinsIcon,
   Delete,
   Loader2,
   PlusSquareIcon,
@@ -31,6 +32,7 @@ const ContractUpdateTab = ({
   const [isAdding, setIsAdding] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [oraclePk, setOraclePk] = useState("");
+  const [isSetting, setIsSetting] = useState(false);
 
   const deploymentUtils = useDeployment();
 
@@ -221,6 +223,32 @@ const ContractUpdateTab = ({
               <div className="flex items-center gap-2">
                 <Delete className="w-4 h-4" />
                 Remove Oracle
+              </div>
+            )}
+          </Button>
+        </div>
+        <div className="flex flex-col gap-3">
+          <h2 className="text-xl text-slate-200 pt-4">
+            Update sUSD coin type
+          </h2>
+          <Label className="text-slate-300">Sets the coin type for sUSD</Label>
+          <Button
+            onClick={() => {
+              handleAdminFunctionality("setSUSDType", setIsSetting);
+            }}
+            variant="destructive"
+            size="sm"
+            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 w-max text-white border-0 shadow-lg shadow-cyan-500/25"
+          >
+            {isSetting ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Setting...
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <CoinsIcon className="w-4 h-4" />
+                Set coin color
               </div>
             )}
           </Button>

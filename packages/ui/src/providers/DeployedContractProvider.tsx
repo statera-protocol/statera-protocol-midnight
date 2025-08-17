@@ -1,8 +1,15 @@
 import useMidnightWallet from "@/hookes/useMidnightWallet";
-import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+import ClientSideLiquidationBot from "@/lib/client-side-liquidation-bot";
+import {
+  decodeCoinPublicKey,
+  encodeCoinPublicKey,
+} from "@midnight-ntwrk/compact-runtime";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
-import type { StateraPrivateState } from "@statera/ada-statera-protocol";
+import type {
+  MintMetadata,
+  StateraPrivateState,
+} from "@statera/ada-statera-protocol";
 import {
   StateraAPI,
   type DeployedStateraAPI,
@@ -162,7 +169,7 @@ export const DeployedContractProvider = ({
     clearError,
     contractState,
     privateState,
-    userRole
+    userRole,
   };
 
   return (

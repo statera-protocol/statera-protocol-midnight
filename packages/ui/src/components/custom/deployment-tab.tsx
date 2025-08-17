@@ -145,26 +145,7 @@
 //       <div className="space-y-4 pt-8">
 //         <p className="text-slate-300 text-xl">Set sUSD coin color</p>
 //         <div className="flex gap-2">
-//           <Button
-//             onClick={() => {
-//               handleAdminFunctionality("setSUSDType", setIsSetting);
-//             }}
-//             variant="destructive"
-//             size="sm"
-//             className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white border-0 shadow-lg shadow-cyan-500/25"
-//           >
-//             {isSetting ? (
-//               <div className="flex items-center gap-2">
-//                 <Loader2 className="w-4 h-4 animate-spin" />
-//                 Setting...
-//               </div>
-//             ) : (
-//               <div className="flex items-center gap-2">
-//                 <CoinsIcon className="w-4 h-4" />
-//                 Set coin color
-//               </div>
-//             )}
-//           </Button>
+//           
 //         </div>
 //       </div>
 //     </TabsContent>
