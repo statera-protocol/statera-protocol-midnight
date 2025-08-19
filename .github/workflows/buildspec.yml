@@ -1,0 +1,48 @@
+name: Build Contract Artifacts
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+  workflow_dispatch:
+
+jobs:
+  build-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'yarn'
+      
+      - name: Install Compact
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/midnightntwrk/compact/releases/latest/download/compact-installer.sh | sh
+          export PATH="$HOME/.cargo/bin:$PATH"
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      
+      - name: Build contracts
+        run: |
+          cd contracts/ada-statera-protocol
+          yarn compact
+          yarn build
+      
+      - name: Commit artifacts
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add contracts/ada-statera-protocol/dist/
+          git add contracts/ada-statera-protocol/src/managed/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update contract artifacts [skip ci]"
+            git push
+          fi
