@@ -395,6 +395,7 @@ const MidnightWalletProvider = ({
   const disconnect = async () => {
     sessionStorage.removeItem("WALLET_STATE");
     sessionStorage.removeItem("WALLET_CONNECTED");
+    window.location.reload();
     setWalletAPI(undefined);
     setWalletState({
       address: undefined,

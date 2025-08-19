@@ -70,6 +70,7 @@
   "packageManager": "yarn@4.9.2",
   "workspaces": [
     "packages/ui",
+    "packages/server",
     "packages/api",
     "packages/cli",
     "packages/contracts/ada-statera-protocol",

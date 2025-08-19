@@ -262,7 +262,7 @@ export function AdminPanel() {
                     value="parameters"
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white"
                   >
-                    Parameters
+                    Protocol Configuration
                   </TabsTrigger>
                   {/* <TabsTrigger
                     value="contract managment"
