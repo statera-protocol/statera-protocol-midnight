@@ -5,9 +5,7 @@ import {
   StateraContractProviders,
   stateraPrivateStateId,
 } from "./common-types.js";
-import {
-  ContractAddress,
-} from "@midnight-ntwrk/compact-runtime";
+import { ContractAddress } from "@midnight-ntwrk/compact-runtime";
 import {
   FinalizedCallTxData,
   findDeployedContract,
@@ -21,17 +19,14 @@ import {
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
 
-
 const StateraContractInstance: StateraContract = new Contract(witnesses);
 
 export interface DeployedStateraAPI {
   readonly deployedContractAddress: ContractAddress;
   liquidatePosition: (
-    collateralId: string,
     position: LiquidationPayload
   ) => Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">>;
 }
-
 
 export class StateraAPI implements DeployedStateraAPI {
   deployedContractAddress: string;
@@ -47,7 +42,6 @@ export class StateraAPI implements DeployedStateraAPI {
   ) {
     this.deployedContractAddress =
       allReadyDeployedContract.deployTxData.public.contractAddress;
-
   }
 
   static async joinStateraContract(
@@ -78,18 +72,13 @@ export class StateraAPI implements DeployedStateraAPI {
     return new StateraAPI(providers, existingContract, logger);
   }
 
-
-  async liquidatePosition(
-    collateralId: string,
-    position: LiquidationPayload
-  ) {
-    
+  async liquidatePosition(position: LiquidationPayload): Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">> {
     // Construct tx with dynamic coin data
     const txData =
       await this.allReadyDeployedContract.callTx.liquidateDebtPosition(
-        position?.collateral_amount as bigint,
-        utils.hexStringToUint8Array(collateralId),
-        position.debt as bigint
+        BigInt(position.collateral_amount),
+        utils.hexStringToUint8Array(position.id),
+        BigInt(position.debt)
       );
 
     this.logger?.trace({
@@ -101,7 +90,7 @@ export class StateraAPI implements DeployedStateraAPI {
           blockHeight: txData.public.blockHeight,
         },
       },
-    });
+    }); 
     return txData;
   }
 

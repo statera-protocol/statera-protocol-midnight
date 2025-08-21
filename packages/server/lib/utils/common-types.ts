@@ -5,6 +5,7 @@ import {
 } from "@statera/ada-statera-protocol";
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
+import { Response } from "express";
 
 export const stateraPrivateStateId = "stateraPrivateState";
 export type StateraPrivateStateId = typeof stateraPrivateStateId;
@@ -41,8 +42,20 @@ export interface Position {
 }
 
 export interface LiquidationPayload {
-  id: Uint8Array;
-  debt: bigint;
-  collateral_amount: bigint;
+  id: string,
+  debt: number;
+  collateral_amount: number;
 }
 
+export interface SuccessResponse<ResponseData> {
+  message: string;
+  data: ResponseData;
+}
+
+export interface ErrorResponse {
+  message: string;
+}
+
+export type APIResponse<ResponseData> =
+  | SuccessResponse<ResponseData>
+  | ErrorResponse;
