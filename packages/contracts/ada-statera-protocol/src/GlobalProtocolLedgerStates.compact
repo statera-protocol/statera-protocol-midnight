@@ -1,0 +1,63 @@
+module GlobalProtocolLedgerStates {
+    import CompactStandardLibrary;
+    
+    /*sUSD mint ledger states*/
+    export ledger nonce: Bytes<32>;
+    export ledger sUSDTokenType: Bytes<32>;
+    export ledger mintCounter: Counter;
+    export ledger totalMint: Uint<128>;
+
+    /* Tracks who the super admin */
+    export ledger superAdmin: Bytes<32>;
+    /* Tracks list of protocol admins */
+    export ledger admins: Set<Bytes<32>>;
+
+    export ledger validCollateralAssetType: Bytes<32>;
+    export ledger liquidationCount: Counter;
+
+    /* Protocol vitals */
+    export ledger liquidationThreshold: Uint<8>;
+    export ledger LTV: Uint<8>; // LTV --> Max. percentage of debt a user can take based on collateral deposited
+    export ledger MCR: Uint<8>; //MCR --> Minimum Collateral Ratio (expressed in percentage)
+    /* Liquation monitoring variable
+    * ADA_sUSD_index --> Keeps track of the entire rate of one sUSD in relative to liquidated ADA
+    */
+    export ledger ADA_sUSD_index: Uint<128>;
+    export ledger cumulativeScalingFactor: Uint<2>;
+
+    export ledger percent: Uint<64>;
+    export ledger scaleFactor: Uint<64>; // scale actor for decimal fixed point operation 
+    export ledger stateritePersUSD: Uint<64>; // Unit of statera USD (1000000 stateritePersUSD => 1sUSD)
+
+    /* Tracks assets stored within the smart contract */
+    export ledger protocolReserveTVL: Map<Bytes<32>, QualifiedCoinInfo>;
+    /* Mapping to keep track of sUSD coin input into the stakePool */
+    export ledger protocolStakeTVL: QualifiedCoinInfo;
+
+    export ledger acceptedSwapTokens : Set<Bytes<32>>; // Keeps track of the list of acccepted stable coin that caan be de1posited for mint
+
+
+    /**** Helper functions for managing protocol reserve funds ****/
+    export circuit recieveAndAddToProtocolReserveTVL(disclosedCoin: CoinInfo): []{
+        // Recieves the coin into the contract
+        receive(disclosedCoin);
+
+        //Update protocol
+        const coinToInsert = protocolReserveTVL.member(disclosedCoin.color) ?
+        mergeCoinImmediate(protocolReserveTVL.lookup(disclosedCoin.color), disclosedCoin) : 
+        disclosedCoin;
+
+        protocolReserveTVL.insertCoin(disclosedCoin.color, coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+    }
+
+    export circuit sendFromProtocolReserveAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
+        const protocolBalanceToSendFrom = protocolReserveTVL.lookup(coinType);
+
+        const sendResult = send(protocolBalanceToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(address), amount);
+        if(sendResult.change.is_some){
+            protocolReserveTVL.insertCoin(coinType, sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+        }else{
+            protocolReserveTVL.remove(coinType);
+        }
+    }
+}

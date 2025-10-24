@@ -1,0 +1,126 @@
+module StakerAction {
+    import CompactStandardLibrary;
+    import "./GlobalProtocolLedgerStates";
+    import "./Utils";
+
+    /* Mapping for stakers --> addrs -> Staker */
+    export ledger stakers: Map<Bytes<32>, Staker>;
+
+    export struct Staker {
+        id: Bytes<32>;
+        address: ZswapCoinPublicKey;
+        entry_ADA_SUSD_index: Uint<128>;
+        effective_user_balance: Uint<32>;
+        stake_reward: Uint<64>;
+        entry_scale_factor: Uint<32>;   
+    }
+
+    /* INTERACTIONS FOR STAKERS */
+    export circuit depositToStabilityPool(coin: CoinInfo): [] {
+        const disclosedCoin = disclose(coin);
+        assert (coin.color == sUSDTokenType, "Invalid coin type provided to pool");
+
+        // Receives and write to coin balance
+        receive(disclosedCoin);    
+        /* Writes coin to the protocolStakeTVL*/
+        if(stakers.isEmpty()){
+            // Writes coin generated within the tx as first stake
+            protocolStakeTVL.writeCoin(disclosedCoin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+        }else{
+            // Merges the previous coin stored on the ledger with the one generated within the tx and writes it as the new stakePool total
+            protocolStakeTVL.writeCoin(mergeCoinImmediate(protocolStakeTVL, disclosedCoin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+        }
+
+        // Updates statbility pool mapping
+        const stakersId = generateUserId(disclose(secrete_key()));
+        // Inserts the new stake detail with the user's adddress as key
+        stakers.member(ownPublicKey().bytes) ? 
+        stakers.insert(ownPublicKey().bytes, Staker{
+            ...stakers.lookup(ownPublicKey().bytes),
+            effective_user_balance: (stakers.lookup(ownPublicKey().bytes).effective_user_balance + disclosedCoin.value) as Uint<32>,
+            entry_ADA_SUSD_index: ADA_sUSD_index,
+            entry_scale_factor: cumulativeScalingFactor,
+        }) :
+        stakers.insert(ownPublicKey().bytes, Staker {
+            ...default<Staker>,
+            id: stakersId,
+            address: ownPublicKey(),
+            entry_ADA_SUSD_index: ADA_sUSD_index,
+            entry_scale_factor: cumulativeScalingFactor,
+            effective_user_balance: disclosedCoin.value as Uint<32>
+        });
+    }
+
+
+    export circuit checkStakeReward(): [Uint<128>, Staker]{
+        assert (stakers.member(ownPublicKey().bytes), "Can not check stake reward: You have no stake position");
+        
+        const stakePosition = stakers.lookup(ownPublicKey().bytes);
+        // Verifies users stake id using their secret_key
+        const stakersId = generateUserId(disclose(secrete_key()));
+        assert (stakersId == stakePosition.id, "You are not a staker: Invalid staker ID");
+
+        // Computes the user stake reward i.e earned_ADA = user_sUSD × (total_ADA_per_sUSD − user_entry_ADA_per_sUSD) + pending_balance
+        const stakeReward = (((stakePosition.effective_user_balance as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<64>;
+        // Calculates user's new effective stake balance using userstakeAmount * (cumulativeScalingFactor / user_entry_scale_factor) 
+        const new_user_effective_bal = (stakePosition.effective_user_balance as Field) * DivisionFunction(cumulativeScalingFactor as Uint<64>, stakePosition.entry_scale_factor);
+        // Updates the user's pending ADA upon interaction to avoid looping to update individually
+        const updatedStakersPosition = Staker {
+            ...stakePosition,
+            stake_reward: stakeReward,
+            effective_user_balance: new_user_effective_bal as Uint<32>
+        };
+
+        stakers.insert(ownPublicKey().bytes, updatedStakersPosition);
+
+        return [stakeReward, updatedStakersPosition];
+    }
+
+
+    export circuit withdrawStakeReward(_amount: Uint<64>):[]{
+        const [stakeReward, updatedStakersPosition] = checkStakeReward();
+        // Checks if the amount to withdraw is not more than the withdrawableStakeReward
+        assert (disclose(_amount) <= stakeReward, "Can not withdraw more than available stake reward");
+        assert (stakeReward >= _amount, "Withdraw amount can not be more than availbale stake reward");
+        
+        // Sends the pending ADA to the staker
+        const send_amt = disclose(_amount) * scaleFactor as Uint<64>;
+        sendFromProtocolReserveAndManageChange(ownPublicKey(), send_amt, validCollateralAssetType);
+        
+        // Updates the user's pending ADA upon interaction to avoid looping to update individually
+        const stakeRewardBalance = stakeReward - disclose(_amount);
+        const updatedStakePosition = Staker {
+            ...updatedStakersPosition,
+            stake_reward: stakeRewardBalance as Uint<64>,
+            entry_ADA_SUSD_index: ADA_sUSD_index,
+        };
+
+        stakers.insert(ownPublicKey().bytes, updatedStakePosition);
+    }
+
+    /* Permits user to withdraw all or part of their stake reward from the stakePool */
+    export circuit withdrawStake(_amount: Uint<32>): []{
+        const disclosedAmount = disclose(_amount);
+        assert (stakers.member(ownPublicKey().bytes), "Can not withdraw stake: You are not a staker");
+
+        const stakePosition = stakers.lookup(ownPublicKey().bytes);
+
+        assert (_amount <= stakePosition.effective_user_balance, "Can not withdraw more than available stake balance");
+        const stakersId = generateUserId(disclose(secrete_key()));
+        assert (stakersId == stakePosition.id, "Cannot withdraw stake reward you are not the owner");
+        const sendResult = send(protocolStakeTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmount);
+        const balance = stakePosition.effective_user_balance - disclosedAmount;
+
+        sendResult.change.is_some ? 
+        protocolStakeTVL.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self())) :
+        protocolStakeTVL.resetToDefault();
+
+        const updatedStakePosition = Staker {
+            ...stakePosition,
+            effective_user_balance: balance as Uint<32>
+        };
+
+        stakers.insert(ownPublicKey().bytes, updatedStakePosition);
+    }
+
+}

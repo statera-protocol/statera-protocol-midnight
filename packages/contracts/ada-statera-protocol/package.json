@@ -16,17 +16,19 @@
     }
   },
   "scripts": {
-    "compact": "compact compile src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
+    "compact": "compact compile --skip-zk src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
     "compact-dev": "compact compile src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
     "prebuild": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepack": "yarn build"
+    "prepack": "yarn build",
+    "test": "vitest"
   },
   "devDependencies": {
     "eslint": "^9.27.0",
     "jest": "^29.7.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.1"
   }
 }

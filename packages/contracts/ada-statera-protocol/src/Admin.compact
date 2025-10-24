@@ -1,0 +1,59 @@
+module Admin {
+    import CompactStandardLibrary;
+    import "./GlobalProtocolLedgerStates";
+
+    /* Tracks the list of trustd kyc oracle networks */
+    export ledger trustedOracles: Set<Bytes<32>>;
+
+    /* INTERACTION FOR ADMIN ONLY*/
+    export circuit resetProtocolConfig(_liquidationThreshold: Uint<8>, _LTV: Uint<8>, _MCR: Uint<8>): []{
+        assert (ownPublicKey().bytes == superAdmin || admins.member(ownPublicKey().bytes), "Can not set SUSD token type: Unauthorized");
+
+        liquidationThreshold = disclose(_liquidationThreshold);
+        LTV = disclose(_LTV);
+        MCR = disclose(_MCR);
+    }
+
+    export circuit setSUSDTokenType(): []{
+        assert (ownPublicKey().bytes == superAdmin || admins.member(ownPublicKey().bytes), "Can not set SUSD token type: Unauthorized");
+
+        sUSDTokenType = tokenType(pad(32, "sUSD_token"), kernel.self());
+    }
+
+    export circuit addTrustedOracle(oraclePk: Bytes<32>): []{
+        const disclosedOraclePk = disclose(oraclePk);
+        assert (!trustedOracles.member(disclosedOraclePk), "Can not add oracle pk: Already exist");
+
+        trustedOracles.insert(disclosedOraclePk);
+    }
+
+    export circuit removeTrustedOraclePk(oraclePk: Bytes<32>): []{
+        const disclosedOraclePk = disclose(oraclePk);
+        assert (trustedOracles.member(disclosedOraclePk), "Can not add oracle public key: Does not exist");
+
+        trustedOracles.remove(disclosedOraclePk);
+    }
+
+
+    export circuit addAdmin(address: Bytes<32>): []{
+        assert (ownPublicKey().bytes == superAdmin, "Can not add new admin: Unauthorized");
+        assert (!admins.member(disclose(address)), "Can not add admin: Already an admin");
+        // Adds the ne admin to the list of authorized admins
+        admins.insert(disclose(address));
+    }
+
+    export circuit transferAdminRole(address: Bytes<32>): []{
+        assert (ownPublicKey().bytes == superAdmin, "Can not add new admin: Unauthorized");
+
+        superAdmin = disclose(address);
+    }
+
+    export circuit addSwapToken(token: Bytes<32>): []{
+        const disclosedToken = disclose(token);
+        assert (ownPublicKey().bytes == superAdmin, "Can not add new swap token: Unauthorized");
+        assert (!acceptedSwapTokens.member(disclosedToken), "Can not add new token: ALready exists");
+
+        acceptedSwapTokens.insert(disclosedToken);
+    }
+
+}

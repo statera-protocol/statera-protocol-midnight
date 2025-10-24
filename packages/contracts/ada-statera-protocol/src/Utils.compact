@@ -1,11 +1,20 @@
-module CustomLibrary {
+module Utils {
     import CompactStandardLibrary;
-    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata, generateAdminId, ComplianceToken, KYCTokenData, ValidityRange};
+    export { MintMetadata, calculateHFactor, DivisionFunction, generateUserId, getMintMetadata, hashMintMetadata, ComplianceToken, KYCTokenData, ValidityRange};
+    
+    /* Returns user local secrete key used for private ID generation */
+    export witness secrete_key(): Bytes<32>;
+    witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
+    witness get_mintmetadata_private_state(): MintMetadata;
+
+    /* Sets mint-metadata private state using deposit ID after minting, repayment or withdrawal */
+    export witness set_mint_metadata(metadata: MintMetadata): [];
     
     /* Structure for Private state */
     struct MintMetadata {
         collateral: Uint<64>;
         debt: Uint<64>;
+        borrowLimit: Uint<64>;
     }
 
     struct KYCTokenData {
@@ -30,13 +39,11 @@ module CustomLibrary {
         oracleSignature: Bytes<32>;
     }
 
-    witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
-    witness get_mintmetadata_private_state(): MintMetadata;
     
  
     circuit calculateHFactor(collateralAmount: Uint<64>, amountToMint: Uint<64>, liquidationThreshold: Uint<8>): Uint<128>{
-        const percentageDivisor: Uint<64> = 100;
-        const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * percentageDivisor) as Uint<64>);
+        const percent: Uint<64> = 100;
+        const healthFactor = DivisionFunction((collateralAmount * liquidationThreshold) as Uint<64>, (amountToMint * percent) as Uint<64>);
         return healthFactor;
     }
 
@@ -60,27 +67,16 @@ module CustomLibrary {
         );
     }
 
-    circuit generateAdminId(sk: Bytes<32>): Bytes<32>{
-        return persistentHash<Vector<2, Bytes<32>>>(
-            [ 
-                pad(32, "susd:admin"),
-                persistentHash<Vector<2, Bytes<32>>>(
-                    [sk, kernel.self().bytes]
-                )
-             ]
-        );
-    }
-
     circuit getMintMetadata(): MintMetadata{
-        const {debt, collateral} = disclose(get_mintmetadata_private_state());
+        const {debt, collateral, borrowLimit} = disclose(get_mintmetadata_private_state());
         return MintMetadata {
             collateral,
-            debt
+            debt,
+            borrowLimit
         };
     } 
 
     circuit hashMintMetadata (metadata: MintMetadata, randomizer: Bytes<32>): Bytes<32> {
         return persistentCommit<MintMetadata>(metadata, randomizer);
     }
-    
 }
