@@ -10,6 +10,7 @@ import {
   DerivedStaker,
   DerivedTrustedOracle,
 } from "./common-types.js";
+import {} from "@midnight-ntwrk/midnight-js-utils"
 
 export const randomNonceBytes = (
   length: number,
@@ -124,34 +125,6 @@ export function createDerivedAdminArray(admins: {
   return Array.from(admins);
 }
 
-export function createDeriveReservePoolArray(reservePoolTotal: {
-  isEmpty(): boolean;
-  size(): bigint;
-  member(key_0: Uint8Array): boolean;
-  lookup(key_0: Uint8Array): {
-    nonce: Uint8Array;
-    color: Uint8Array;
-    value: bigint;
-    mt_index: bigint;
-  };
-  [Symbol.iterator](): Iterator<
-    [
-      Uint8Array,
-      {
-        nonce: Uint8Array;
-        color: Uint8Array;
-        value: bigint;
-        mt_index: bigint;
-      },
-    ]
-  >;
-}): DerivedReservedPoolTotal[] {
-  return Array.from(reservePoolTotal).map(([key, reserve]) => ({
-    id: uint8arraytostring(key),
-    pool_balance: reserve,
-  }));
-}
-
 export function createDerivedStakersArray(stakers: {
   isEmpty(): boolean;
   size(): bigint;
@@ -164,6 +137,36 @@ export function createDerivedStakersArray(stakers: {
     staker: staker,
   }));
 }
+
+export function createDerivedReservedPoolArray(protocolReserveTVL: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array<ArrayBufferLike>): boolean;
+    lookup(key_0: Uint8Array): {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    };
+    [Symbol.iterator](): Iterator<[Uint8Array, {
+        nonce: Uint8Array;
+        color: Uint8Array;
+        value: bigint;
+        mt_index: bigint;
+    }]>;
+}): DerivedReservedPoolTotal[] {
+  return Array.from(protocolReserveTVL).map(([key, entry]) => ({
+    // prefer the stored color from the entry, fallback to the map key
+    color: entry?.color ?? key,
+    balance: {
+      nonce: entry.nonce,
+      color: entry.color,
+      value: entry.value,
+      mt_index: entry.mt_index,
+    },
+  }));
+}
+
 
 export function createDerivedOraclesArray(trustedOracles: {
   isEmpty(): boolean;

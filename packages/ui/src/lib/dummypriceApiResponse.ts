@@ -1,0 +1,1 @@
+export const dummyPriceFeed = [0.15, 0.23, 0.3, 0.4, 0.5, 0.6, 0.7, 0.85, 0.9];

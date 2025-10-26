@@ -9,7 +9,7 @@ module StakerAction {
     export struct Staker {
         id: Bytes<32>;
         address: ZswapCoinPublicKey;
-        entry_ADA_SUSD_index: Uint<128>;
+        entry_collateralRewardPerSUSD: Uint<128>;
         effective_user_balance: Uint<32>;
         stake_reward: Uint<64>;
         entry_scale_factor: Uint<32>;   
@@ -38,14 +38,14 @@ module StakerAction {
         stakers.insert(ownPublicKey().bytes, Staker{
             ...stakers.lookup(ownPublicKey().bytes),
             effective_user_balance: (stakers.lookup(ownPublicKey().bytes).effective_user_balance + disclosedCoin.value) as Uint<32>,
-            entry_ADA_SUSD_index: ADA_sUSD_index,
+            entry_collateralRewardPerSUSD: collateralRewardPerSUSD,
             entry_scale_factor: cumulativeScalingFactor,
         }) :
         stakers.insert(ownPublicKey().bytes, Staker {
             ...default<Staker>,
             id: stakersId,
             address: ownPublicKey(),
-            entry_ADA_SUSD_index: ADA_sUSD_index,
+            entry_collateralRewardPerSUSD: collateralRewardPerSUSD,
             entry_scale_factor: cumulativeScalingFactor,
             effective_user_balance: disclosedCoin.value as Uint<32>
         });
@@ -60,10 +60,13 @@ module StakerAction {
         const stakersId = generateUserId(disclose(secrete_key()));
         assert (stakersId == stakePosition.id, "You are not a staker: Invalid staker ID");
 
-        // Computes the user stake reward i.e earned_ADA = user_sUSD × (total_ADA_per_sUSD − user_entry_ADA_per_sUSD) + pending_balance
-        const stakeReward = (((stakePosition.effective_user_balance as Field) * (ADA_sUSD_index - stakePosition.entry_ADA_SUSD_index)) + stakePosition.stake_reward) as Uint<64>;
         // Calculates user's new effective stake balance using userstakeAmount * (cumulativeScalingFactor / user_entry_scale_factor) 
-        const new_user_effective_bal = (stakePosition.effective_user_balance as Field) * DivisionFunction(cumulativeScalingFactor as Uint<64>, stakePosition.entry_scale_factor);
+        const new_user_effective_bal = ScaledDivisionFunction(
+            (stakePosition.effective_user_balance as Field) * (ScaledDivisionFunction((cumulativeScalingFactor * SCALE) as Uint<64>, stakePosition.entry_scale_factor)) as Uint<64>,
+            SCALE
+        );
+        // Computes the user stake reward i.e earned_ADA = user_sUSD × (total_ADA_per_sUSD − user_entry_ADA_per_sUSD) + pending_balance
+        const stakeReward =  ScaledDivisionFunction((((stakePosition.effective_user_balance as Field) * (collateralRewardPerSUSD - stakePosition.entry_collateralRewardPerSUSD)) + stakePosition.stake_reward) as Uint<64>, SCALE);
         // Updates the user's pending ADA upon interaction to avoid looping to update individually
         const updatedStakersPosition = Staker {
             ...stakePosition,
@@ -84,7 +87,7 @@ module StakerAction {
         assert (stakeReward >= _amount, "Withdraw amount can not be more than availbale stake reward");
         
         // Sends the pending ADA to the staker
-        const send_amt = disclose(_amount) * scaleFactor as Uint<64>;
+        const send_amt = disclose(_amount) * SCALE as Uint<64>;
         sendFromProtocolReserveAndManageChange(ownPublicKey(), send_amt, validCollateralAssetType);
         
         // Updates the user's pending ADA upon interaction to avoid looping to update individually
@@ -92,7 +95,7 @@ module StakerAction {
         const updatedStakePosition = Staker {
             ...updatedStakersPosition,
             stake_reward: stakeRewardBalance as Uint<64>,
-            entry_ADA_SUSD_index: ADA_sUSD_index,
+            entry_collateralRewardPerSUSD: collateralRewardPerSUSD,
         };
 
         stakers.insert(ownPublicKey().bytes, updatedStakePosition);

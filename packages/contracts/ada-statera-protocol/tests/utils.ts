@@ -17,12 +17,6 @@ export function pad(s: string, n: number): Uint8Array {
 
 export function uint8arraytostring(array: Uint8Array): string {
   // Debug logging
-  console.log(
-    "Converting array:",
-    Array.from(array)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-  );
   console.log("Array length:", array.length);
 
   if (array.length < 16) {
@@ -94,4 +88,15 @@ export function hexStringToUint8Array(hexStr: string): Uint8Array {
 
   // Use the conversion function instead of uuidParser
   return uuidToUint8Array(hexStr);
+}
+
+
+export function convertMapToArray<T>(states: {
+    isEmpty(): boolean;
+    size(): bigint;
+    member(key_0: Uint8Array<ArrayBufferLike>): boolean;
+    lookup(key_0: Uint8Array): T;
+    [Symbol.iterator](): Iterator<[Uint8Array, T]>;
+}){
+  return Array.from(states).map(([key, state]) => ({key: uint8arraytostring(key), state}))
 }

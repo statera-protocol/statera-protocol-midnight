@@ -1,31 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="1" errors="0" time="0.209000228">
-    <testsuite name="tests/adaStateraProtocol.test.ts" timestamp="2025-10-23T14:32:21.048Z" hostname="codebiginrs-desktop" tests="1" failures="1" errors="0" skipped="0" time="0.209000228">
-        <testcase classname="tests/adaStateraProtocol.test.ts" name="Creating vault position, minting against collateral, repay and withdrawCollateral &gt; Should allow depositing of assets and miting of sUSD against deposit vault position" time="0.206677157">
-            <system-out>
-After deposit:
-- Collateral: [33m3000000n[39m
-- Borrow Limit: [33m2400000n[39m
-- TVL size: [33m1n[39m
-
-Attempting to mint 2 sUSD...
-After mint:
-- Total Mint (ledger): [33m0n[39m
-- Debt (private): [33m0n[39m
-- Collateral (private): [33m3000000n[39m
-- Borrow Limit (private): [33m2400000n[39m
-
-            </system-out>
-            <failure message="expected 0n to be 2000000n // Object.is equality" type="AssertionError">
-AssertionError: expected 0n to be 2000000n // Object.is equality
-
-- Expected
-+ Received
-
-- 2000000n
-+ 0n
-
- ❯ tests/adaStateraProtocol.test.ts:57:33
+<testsuites name="vitest tests" tests="1" failures="1" errors="0" time="0">
+    <testsuite name="tests/adaStateraProtocol.test.ts" timestamp="2025-10-25T12:15:29.495Z" hostname="codebiginrs-desktop" tests="1" failures="1" errors="0" skipped="0" time="0">
+        <testcase classname="tests/adaStateraProtocol.test.ts" name="tests/adaStateraProtocol.test.ts" time="0">
+            <failure message="ENOENT: no such file or directory, open &apos;/tmp/Gu8Gmi6elEAWOqtb4XV_m/ssr/92cfaabe6dec1b6dda533ba0572ba208d8a2e3b9&apos;" type="Error">
+Error: ENOENT: no such file or directory, open &apos;/tmp/Gu8Gmi6elEAWOqtb4XV_m/ssr/92cfaabe6dec1b6dda533ba0572ba208d8a2e3b9&apos;
             </failure>
         </testcase>
     </testsuite>

@@ -1,4 +1,5 @@
 import type { MintMetadata } from "@statera/ada-statera-protocol";
+import { dummyPriceFeed } from "./dummypriceApiResponse";
 
 export interface LiquidationPayload {
   id: Uint8Array;
@@ -18,6 +19,7 @@ export class ClientSideLiquidationBot {
   private isMonitoring: boolean = false;
   private checkInterval: NodeJS.Timeout | null = null;
   private position: MintMetadata;
+  static currentFeedIndex: number = dummyPriceFeed.length - 1;
 
   constructor(
     protected server_bot_url: string,
@@ -30,21 +32,25 @@ export class ClientSideLiquidationBot {
   }
 
   static async getPriceFeed(): Promise<number | null> {
-    try {
-      const response = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=cardano&vs_currencies=usd"
-      );
-      const feed = await response.json();
-      return feed.cardano.usd;
-    } catch (error) {
-      console.error("Failed to fetch price feed");
-      return null;
+    if (this.currentFeedIndex > 0) {
+      return Promise.resolve(ClientSideLiquidationBot.currentFeedIndex--);
+    } else {
+      return Promise.reject(null);
     }
+    // try {
+    //   const response = await fetch(
+    //     "https://api.coingecko.com/api/v3/simple/price?ids=cardano&vs_currencies=usd"
+    //   );
+    //   const feed = await response.json();
+    //   return feed.cardano.usd;
+    // } catch (error) {
+    //   console.error("Failed to fetch price feed");
+    //   return null;
+    // }
   }
 
   calculateHFactor(oraclePrice: number): number {
-    const currentAssetPrice =
-      Number(this.position.collateral) * oraclePrice;
+    const currentAssetPrice = Number(this.position.collateral) * oraclePrice;
     const hFactor =
       (currentAssetPrice * this.liquidationThreshold) /
       (Number(this.position.debt) * 100);
@@ -134,6 +140,5 @@ export class ClientSideLiquidationBot {
     }
   }
 }
-
 
 export default ClientSideLiquidationBot;

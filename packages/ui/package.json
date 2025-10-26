@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "start": "http-server --port 0 ./dist",
-    "start-dev": "http-server --port 0 ./dist",
+    "start-dev": "http-server -port 0 ./dist",
     "build": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir ./dist/zkir",
     "prebuild": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/keys ./dist/keys && cp -r ../contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir ./dist/zkir",
     "lint": "eslint .",

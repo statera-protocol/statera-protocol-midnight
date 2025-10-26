@@ -8,6 +8,7 @@ import { AppSidebar } from "./app-sidebar";
 import { DashboardHeader } from "./dashboard-header";
 import { Toaster } from "react-hot-toast";
 import { AdminPanel } from "./admin-panel";
+import { SwapInterface } from "./swap-interface";
 
 
 const Dashboard = () => {
@@ -23,6 +24,8 @@ const Dashboard = () => {
         return <MintingInterface />;
       case "stake":
         return <StakingInterface />;
+      case "swap":
+        return <SwapInterface />;
       case "admin":
         return <AdminPanel />;  
       default:

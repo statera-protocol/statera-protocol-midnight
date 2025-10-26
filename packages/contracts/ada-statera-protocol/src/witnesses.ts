@@ -27,6 +27,20 @@ export const witnesses = {
     return [privateState, [quotient, remainder]];
   },
 
+  scaled_division: (
+    { privateState }: WitnessContext<Ledger, StateraPrivateState>,
+    dividend: bigint,
+    divisor: bigint
+  ): [StateraPrivateState, [bigint, bigint]] => {
+    const SCALE_FACTOR = 1_000_000n;
+    if (divisor == 0n) throw "Invaid arithemetic operation";
+
+    const quotient = dividend / divisor;
+    const remainder = dividend % divisor;
+
+    return [privateState, [quotient, remainder]];
+  },
+
   // Returns the user's secrete key stored offchain in their private state
   secrete_key: ({
     privateState,

@@ -36,7 +36,7 @@ export class StateraAPI implements DeployedStateraAPI {
    * @param logger becomes accessible s if they were decleared as static properties as part of the class
    */
   private constructor(
-    providers: StateraContractProviders,
+    private readonly providers: StateraContractProviders,
     public readonly allReadyDeployedContract: DeployedStateraOnchainContract,
     private logger?: Logger
   ) {

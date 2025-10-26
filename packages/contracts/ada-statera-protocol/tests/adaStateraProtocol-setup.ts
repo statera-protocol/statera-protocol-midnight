@@ -30,13 +30,13 @@ export class StateraProtocolSimulator {
   readonly contract: StateraContract;
   turnContext: CircuitContext<StateraPrivateState>;
   updateUserPrivateState: (newPrivateState: StateraPrivateState) => void;
-  readonly scaleFactor: number;
+  readonly SCALE: number;
   readonly contractAddress: string;
-  userPrivateState: StateraPrivateState;
   readonly testComplianceToken: ComplianceToken;
   private testOraclPrice: number;
 
   constructor(privateState: StateraPrivateState) {
+    this.SCALE = 1_000_000;
     this.contract = new Contract(witnesses);
     const {
       currentContractState,
@@ -45,9 +45,9 @@ export class StateraProtocolSimulator {
     } = this.contract.initialState(
       constructorContext(privateState, "0".repeat(64)),
       randomBytes(32),
-      110n,
-      80n,
-      120n,
+      BigInt(1.10 * this.SCALE),
+      BigInt(0.8 * this.SCALE),
+      BigInt(1.20 * this.SCALE),
       encodeTokenType(nativeToken())
     );
     this.contractAddress = sampleContractAddress();
@@ -61,16 +61,7 @@ export class StateraProtocolSimulator {
         this.contractAddress
       ),
     };
-    this.userPrivateState = {
-      secrete_key: randomBytes(32),
-      mint_metadata: {
-        collateral: 0n,
-        debt: 0n,
-        borrowLimit: 0n,
-      },
-    };
-    this.scaleFactor = 1_000_000;
-    this.testOraclPrice = 0.91 * this.scaleFactor;
+    this.testOraclPrice = 0.91 * this.SCALE;
     this.testComplianceToken = {
       oracleSignature: hexStringToUint8Array(
         "165c55a1-55dd-47af-b4cf-19091045ac1b"
@@ -151,7 +142,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.depositToCollateralPool(
         this.turnContext,
-        this.coin(amount * this.scaleFactor),
+        this.coin(amount * this.SCALE),
         this.testComplianceToken,
         BigInt(this.testOraclPrice)
       )
@@ -160,7 +151,7 @@ export class StateraProtocolSimulator {
 
   mintSUSD(amount: number): Ledger {
     return this.updateStateAndGetLedgerState(
-      this.contract.impureCircuits.mintSUSD(this.turnContext, BigInt(amount))
+      this.contract.impureCircuits.mintSUSD(this.turnContext, BigInt(amount * this.SCALE))
     );
   }
 
@@ -168,8 +159,8 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.repay(
         this.turnContext,
-        this.coin(amount * this.scaleFactor),
-        BigInt(amount)
+        this.sUSD_coin(amount * this.SCALE),
+        BigInt(amount * this.SCALE)
       )
     );
   }
@@ -178,7 +169,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.withdrawCollateral(
         this.turnContext,
-        BigInt(amount),
+        BigInt(amount * this.SCALE),
         BigInt(this.testOraclPrice)
       )
     );
@@ -187,7 +178,8 @@ export class StateraProtocolSimulator {
   liquidatePosition(
     id: Uint8Array,
     collateralAmt: number,
-    debt: number
+    debt: number,
+    oraclePrice: number,
   ): Ledger {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.liquidateDebtPosition(
@@ -195,7 +187,7 @@ export class StateraProtocolSimulator {
         BigInt(collateralAmt),
         id,
         BigInt(debt),
-        BigInt(this.testOraclPrice)
+        BigInt(oraclePrice * this.SCALE)
       )
     );
   }
@@ -257,7 +249,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.swapForsUSD(
         this.turnContext,
-        this.coin(amount * this.scaleFactor)
+        this.coin(amount * this.SCALE)
       )
     );
   }
@@ -265,7 +257,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.swapsUSDForToken(
         this.turnContext,
-        this.coin(amount * this.scaleFactor),
+        this.coin(amount * this.SCALE),
         encodeTokenType(nativeToken())
       )
     );
@@ -275,7 +267,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.depositToStabilityPool(
         this.turnContext,
-        this.sUSD_coin(amount * this.scaleFactor)
+        this.sUSD_coin(amount * this.SCALE)
       )
     );
   }
@@ -284,7 +276,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.withdrawStake(
         this.turnContext,
-        BigInt(amount * this.scaleFactor)
+        BigInt(amount * this.SCALE)
       )
     );
   }
@@ -299,7 +291,7 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.withdrawStakeReward(
         this.turnContext,
-        BigInt(amount * this.scaleFactor)
+        BigInt(amount * this.SCALE)
       )
     );
   }

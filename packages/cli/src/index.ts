@@ -123,17 +123,16 @@ const displayLedgerState = async (
     );
   } else {
     logger.info(
-      `Current collateral pool amount is: ${ledgerState.reservePoolTotal}`
+      `Current collateral pool amount is: ${ledgerState.protocolReserveTVL}`
     );
     logger.info(`Current total value minted is: ${ledgerState.totalMint}`);
-    logger.info(`Current nonce is: ${ledgerState.nonce}`);
-    logger.info(`Current depositor is: ${ledgerState.reservePoolTotal}`);
+    logger.info(`Current depositor is: ${ledgerState.depositors}`);
     logger.info(`Current mint count is: ${ledgerState.mintCounter}`);
-    logger.info(`Current stake pool is: ${ledgerState.stakePoolTotal}`);
+    logger.info(`Current stake pool is: ${ledgerState.protocolStakeTVL}`);
     logger.info(`Current stablecoin color is: ${ledgerState.sUSDTokenType}`);
     logger.info(`Current stakers is: ${ledgerState.stakers}`);
     logger.info(
-      `Current no of depositors is: ${ledgerState.reservePoolTotal.value}`
+      `Current no of depositors is: ${ledgerState.depositors.size()}`
     );
     logger.info(
       `Current liquidation threshold is: ${ledgerState.liquidationThreshold}`
@@ -146,18 +145,17 @@ const displayDerivedLedgerState = async (
   logger: Logger
 ): Promise<void> => {
   logger.info(
-    `Current admin is: ${utils.uint8arraytostring(currentState.super_admin)}`
+    `Current admin is: ${utils.uint8arraytostring(currentState.superAdmin)}`
   );
   console.log(
     `Current collateral pool amount is:`,
-    currentState.reservePoolTotal.value
+    currentState.protocolReserveTVL
   );
   console.log(`Current trusted oracles:`, currentState);
   console.log(`Current total value minted is:`, currentState.totalMint);
-  console.log(`Current nonce is:`, currentState.nonce);
   console.log(`Current depositor is:`, currentState.collateralDepositors);
   console.log(`Current mint count is:`, currentState.mintCounter);
-  console.log(`Current stake pool is:`, currentState.stakePoolTotal);
+  console.log(`Current stake pool is:`, currentState.protocolStakeTVL);
   console.log(`Current stablecoin color is:`, currentState.sUSDTokenType);
   console.log(`Current stakers is:`, currentState.stakers);
   console.log(`Current no of depositors is:`, currentState.noOfDepositors);
@@ -202,11 +200,12 @@ You can do one of the following:
   11. Exit
   12. Display comprehensive wallet state (NEW)
   13. Set sUSDTokenTYpe (ADMIN ONLY)
-  14. Liquidate collateral position (LIQUIDATOR ONLY)
-  15. Withdraw your stake balance (STAKERS ONLY)
-  16. Transfer super admin role (STAKERS ONLY)
-  17. Add new kyc oracle pk (ADMIN ONLY)
-  18. Remove kyc oracle pk (ADMIN ONLY)
+  14. Swap stable coin for sUSD
+  15. Swap sUSD for stablecoin
+  16. Withdraw your stake balance (STAKERS ONLY)
+  17. Transfer super admin role (STAKERS ONLY)
+  18. Add new kyc oracle pk (ADMIN ONLY)
+  19. Remove kyc oracle pk (ADMIN ONLY)
 
 Which would you like to do? `;
 
@@ -283,7 +282,8 @@ const circuit_main_loop = async (
             await rli.question("How much do you want to mint?")
           );
           logger.info("Initiating mint operation...");
-          await stateraApi.mint_sUSD(mintAmount);
+          await stateraApi.mintSUSD
+          (mintAmount);
 
           // Critical: Wait for wallet to sync and reflect minted tokens
           logger.info("Waiting for wallet to sync after minting...");
@@ -390,24 +390,39 @@ const circuit_main_loop = async (
         }
 
         case "14": {
-          await stateraApi.liquidatePosition(
-            await rli.question(
-              "Enter ID of collateral position you want to liquidate: "
-            ),
-            providers
+          await stateraApi.swapForSUSD(
+            Number(await rli.question(
+              "Enter amount of stablecoin to swap for sUSD: "
+            ))
           );
 
-          logger.info("Liquidating collateral...");
+          logger.info("Swapping token...");
           // Wait for wallet to sync after withdrawal
           logger.info(
-            "Waiting for wallet to sync after liquidating collateral..."
+            "Waiting for wallet to sync after swapping token..."
+          );
+          await waitForWalletSyncAfterOperation(wallet, logger);
+          await displayComprehensiveWalletState(wallet, currentState, logger);
+          break;
+        }
+        case "15": {
+          await stateraApi.swapSUSDForStableCoin(
+            Number(await rli.question(
+              "Enter amount of sUSD to swap for stablecoin: "
+            ))
+          );
+
+          logger.info("Swapping token...");
+          // Wait for wallet to sync after withdrawal
+          logger.info(
+            "Waiting for wallet to sync after swapping token..."
           );
           await waitForWalletSyncAfterOperation(wallet, logger);
           await displayComprehensiveWalletState(wallet, currentState, logger);
           break;
         }
 
-        case "15": {
+        case "16": {
           await stateraApi.withdrawStake(
             Number(
               await rli.question(
@@ -425,7 +440,7 @@ const circuit_main_loop = async (
           break;
         }
 
-        case "16": {
+        case "17": {
           const addrss = await rli.question(
             "Enter coin public key of the new super admin: "
           );
@@ -442,7 +457,7 @@ const circuit_main_loop = async (
           break;
         }
 
-        case "17": {
+        case "18": {
           const addrss = await rli.question("Enter new oracle public key: ");
           await stateraApi.addTrustedOracle(addrss);
 
@@ -455,7 +470,7 @@ const circuit_main_loop = async (
           break;
         }
 
-        case "18": {
+        case "19": {
           const addrss = await rli.question("Enter oracle public key to remove: ");
           await stateraApi.removeTrustedOracle(addrss);
 

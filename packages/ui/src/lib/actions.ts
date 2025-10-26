@@ -126,4 +126,4 @@ export const calculateExpiryDate = (duration: number, creationDate: number) => {
 };
 
 
-// export const calculate_SPECK_per_tDUST
+// export const calculate_scaleFactor

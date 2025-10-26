@@ -1,4 +1,4 @@
-import { BarChart3, Coins, Settings, TrendingUp, Wallet, Zap } from "lucide-react"
+import { BarChart3, Coins, Settings, Shuffle, TrendingUp, Wallet, Zap } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -42,6 +42,12 @@ const menuItems = [
     title: "Stake & Earn",
     icon: TrendingUp,
     id: "stake",
+    roles: ["user", "admin"],
+  },
+  {
+    title: "Swap Tokens",
+    icon: Shuffle,
+    id: "swap",
     roles: ["user", "admin"],
   },
   {

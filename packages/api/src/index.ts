@@ -39,10 +39,6 @@ export interface DeployedStateraAPI {
   depositToCollateralPool: (
     amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "depositToCollateralPool">>;
-  liquidatePosition: (
-    collateralId: string,
-    providers: StateraContractProviders
-  ) => Promise<FinalizedCallTxData<StateraContract, "liquidateDebtPosition">>;
   depositToStakePool: (
     amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">>;
@@ -52,9 +48,9 @@ export interface DeployedStateraAPI {
   withdrawStake: (
     amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "withdrawStake">>;
-  mint_sUSD: (
+  mintSUSD: (
     mint_amount: number
-  ) => Promise<FinalizedCallTxData<StateraContract, "mint_sUSD">>;
+  ) => Promise<FinalizedCallTxData<StateraContract, "mintSUSD">>;
   repay: (
     amount: number
   ) => Promise<FinalizedCallTxData<StateraContract, "repay">>;
@@ -81,16 +77,16 @@ export interface DeployedStateraAPI {
   ) => Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">>;
   addTrustedOracle: (
     oraclePk: string
-  ) => Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">>; 
+  ) => Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">>;
   removeTrustedOracle: (
     oraclePk: string
-  ) => Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> 
+  ) => Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">>;
 }
-
 
 export class StateraAPI implements DeployedStateraAPI {
   deployedContractAddress: string;
   state: Observable<DerivedStateraContractState>;
+  private readonly SCALE: number = 1_000_000;
 
   /**
    * @param allReadyDeployedContract
@@ -129,11 +125,10 @@ export class StateraAPI implements DeployedStateraAPI {
         return {
           mintCounter: ledgerState.mintCounter,
           totalMint: ledgerState.totalMint,
-          super_admin: ledgerState.super_admin,
-          nonce: ledgerState.nonce,
+          superAdmin: ledgerState.superAdmin,
           sUSDTokenType: ledgerState.sUSDTokenType,
-          stakePoolTotal: ledgerState.stakePoolTotal.value,
-          reservePoolTotal: ledgerState.reservePoolTotal,
+          protocolStakeTVL: ledgerState.protocolStakeTVL.value,
+          protocolReserveTVL: utils.createDerivedReservedPoolArray(ledgerState.protocolReserveTVL),
           liquidationThreshold: ledgerState.liquidationThreshold,
           collateralDepositors: utils.createDerivedDepositorsArray(
             ledgerState.depositors
@@ -143,11 +138,13 @@ export class StateraAPI implements DeployedStateraAPI {
           mintMetadata: privateState?.mint_metadata,
           secrete_key: privateState?.secrete_key,
           admins: utils.createDerivedAdminArray(ledgerState.admins),
-          LVT: ledgerState.LVT,
+          LVT: ledgerState.LTV,
           MCR: ledgerState.MCR,
           liquidationCount: ledgerState.liquidationCount,
           validCollateralType: ledgerState.validCollateralAssetType,
-          trustedOracles: utils.createDerivedOraclesArray(ledgerState.trustedOracles)
+          trustedOracles: utils.createDerivedOraclesArray(
+            ledgerState.trustedOracles
+          ),
         };
       }
     );
@@ -169,7 +166,7 @@ export class StateraAPI implements DeployedStateraAPI {
       privateStateId: stateraPrivateStateId,
       args: [
         utils.randomNonceBytes(32, logger),
-        90n,
+        110n,
         80n,
         120n,
         encodeTokenType(nativeToken()),
@@ -245,8 +242,8 @@ export class StateraAPI implements DeployedStateraAPI {
     const txData =
       await this.allReadyDeployedContract.callTx.depositToCollateralPool(
         this.coin(deposit_unit_specks),
-        BigInt(amount),
-        utils.getTestComplianceToken()
+        utils.getTestComplianceToken(),
+        BigInt(0.95 * this.SCALE)
       );
 
     this.logger?.trace("Collateral Deposit was successful", {
@@ -378,9 +375,10 @@ export class StateraAPI implements DeployedStateraAPI {
   async removeTrustedOracle(
     oraclePk: string
   ): Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> {
-    const txData = await this.allReadyDeployedContract.callTx.removeTrustedOraclePk(
-      utils.hexStringToUint8Array(oraclePk)
-    );
+    const txData =
+      await this.allReadyDeployedContract.callTx.removeTrustedOraclePk(
+        utils.hexStringToUint8Array(oraclePk)
+      );
 
     this.logger?.trace({
       transactionAdded: {
@@ -444,17 +442,17 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   // Mints sUSD
-  async mint_sUSD(
+  async mintSUSD(
     mint_amount: number
-  ): Promise<FinalizedCallTxData<StateraContract, "mint_sUSD">> {
+  ): Promise<FinalizedCallTxData<StateraContract, "mintSUSD">> {
     this.logger?.trace(`Minting sUSD for your loan position...`);
 
-    const txData = await this.allReadyDeployedContract.callTx.mint_sUSD(
+    const txData = await this.allReadyDeployedContract.callTx.mintSUSD(
       BigInt(mint_amount)
     );
     this.logger?.trace({
       transactionAdded: {
-        circuit: "mint_sUSD",
+        circuit: "mintSUSD",
         txHash: txData.public.txHash,
         mintValue: txData.public.tx.mint?.coin.value,
         blockDetails: {
@@ -557,27 +555,16 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async liquidatePosition(
-    collateralId: string,
-    providers: StateraContractProviders
-  ) {
-    this.logger?.info(
-      `Liquidating colateral position with ID: ${collateralId}...`
+  async swapForSUSD(
+    swap_amt: number
+  ): Promise<FinalizedCallTxData<StateraContract, "swapForsUSD">> {
+    const txData = await this.allReadyDeployedContract.callTx.swapForsUSD(
+      this.coin(swap_amt)
     );
-    const privateState = await providers.privateStateProvider.get(
-      "stateraPrivateState"
-    );
-    // Construct tx with dynamic coin data
-    const txData =
-      await this.allReadyDeployedContract.callTx.liquidateDebtPosition(
-        privateState?.mint_metadata.collateral as bigint,
-        utils.hexStringToUint8Array(collateralId),
-        privateState?.mint_metadata.debt as bigint
-      );
-
+    this.logger?.info(`Swapping ${swap_amt} of stablecoin to sUSD...`);
     this.logger?.trace({
       transactionAdded: {
-        circuit: "liquidateCollateralPosition",
+        circuit: "swapForSUSD",
         txHash: txData.public.txHash,
         blockDetails: {
           blockHash: txData.public.blockHash,
@@ -586,6 +573,27 @@ export class StateraAPI implements DeployedStateraAPI {
       },
     });
     return txData;
+  }
+
+  async swapSUSDForStableCoin(
+    swap_amt: number
+  ): Promise<FinalizedCallTxData<StateraContract, "swapsUSDForToken">> {
+    const txData = await this.allReadyDeployedContract.callTx.swapsUSDForToken(
+      this.coin(swap_amt),
+      encodeTokenType(nativeToken())
+    );
+    this.logger?.trace({
+      transactionAdded: {
+        circuit: "swapSUSDForStableCoin",
+        txHash: txData.public.txHash,
+        blockDetails: {
+          blockHash: txData.public.blockHash,
+          blockHeight: txData.public.blockHeight,
+        },
+      },
+    });
+
+     return txData;
   }
 
   // Used to get the private state from the wallets privateState Provider
@@ -602,6 +610,7 @@ export class StateraAPI implements DeployedStateraAPI {
         mint_metadata: {
           collateral: BigInt(0),
           debt: BigInt(0),
+          borrowLimit: BigInt(0),
         },
       }
     );

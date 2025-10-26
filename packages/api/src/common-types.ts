@@ -29,16 +29,10 @@ export type DeployedStateraOnchainContract = FoundContract<StateraContract>;
 export type DerivedStateraContractState = {
   readonly mintCounter: bigint;
   readonly totalMint: bigint;
-  readonly super_admin: Uint8Array;
-  readonly nonce: Uint8Array;
+  readonly superAdmin: Uint8Array;
   readonly sUSDTokenType: Uint8Array;
-  readonly stakePoolTotal: bigint;
-  readonly reservePoolTotal: {
-    nonce: Uint8Array;
-    color: Uint8Array;
-    value: bigint;
-    mt_index: bigint;
-  };
+  readonly protocolReserveTVL: DerivedReservedPoolTotal[];
+  readonly protocolStakeTVL: bigint;
   readonly liquidationThreshold: bigint;
   readonly collateralDepositors: DerivedDepositor[];
   readonly stakers: DerivedStaker[];
@@ -67,8 +61,8 @@ export type DerivedTrustedOracle = {
 };
 
 export type DerivedReservedPoolTotal = {
-  id: string;
-  pool_balance: {
+  color: Uint8Array;
+  balance: {
     nonce: Uint8Array;
     color: Uint8Array;
     value: bigint;

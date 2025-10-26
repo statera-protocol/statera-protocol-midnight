@@ -16,17 +16,16 @@ module GlobalProtocolLedgerStates {
     export ledger liquidationCount: Counter;
 
     /* Protocol vitals */
-    export ledger liquidationThreshold: Uint<8>;
-    export ledger LTV: Uint<8>; // LTV --> Max. percentage of debt a user can take based on collateral deposited
-    export ledger MCR: Uint<8>; //MCR --> Minimum Collateral Ratio (expressed in percentage)
+    export ledger liquidationThreshold: Uint<64>; // Set as 110%
+    export ledger LTV: Uint<64>; // LTV set at 80% --> Max. percentage of debt a user can take based on collateral deposited
+    export ledger MCR: Uint<64>; //MCR  set at 120%--> Minimum Collateral Ratio (expressed in percentage)
     /* Liquation monitoring variable
-    * ADA_sUSD_index --> Keeps track of the entire rate of one sUSD in relative to liquidated ADA
+    * collateralRewardPerSUSD --> Keeps track of the entire rate of one sUSD in relative to liquidated ADA
     */
-    export ledger ADA_sUSD_index: Uint<128>;
-    export ledger cumulativeScalingFactor: Uint<2>;
-
-    export ledger percent: Uint<64>;
-    export ledger scaleFactor: Uint<64>; // scale actor for decimal fixed point operation 
+    export ledger collateralRewardPerSUSD: Uint<128>;
+    export ledger cumulativeScalingFactor: Uint<32>;
+    /** @param SCALE => For decimal operability using fixed point notation **/
+    export ledger SCALE: Uint<64>; // scaling factor => A measure of 1 Unit; 1UNIT ==> 1E6subunits(i.e 1,000,000)
     export ledger stateritePersUSD: Uint<64>; // Unit of statera USD (1000000 stateritePersUSD => 1sUSD)
 
     /* Tracks assets stored within the smart contract */

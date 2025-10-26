@@ -145,7 +145,7 @@ export const DeployedContractProvider = ({
     );
 
     const role =
-      decodeCoinPublicKey(contractState.super_admin) == walletAddressHex ||
+      decodeCoinPublicKey(contractState.superAdmin) == walletAddressHex ||
       contractState.admins.findIndex(
         (admin) => decodeCoinPublicKey(admin) == walletAddressHex
       ) != -1

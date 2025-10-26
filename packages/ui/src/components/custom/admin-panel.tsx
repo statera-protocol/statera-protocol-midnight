@@ -59,7 +59,7 @@ export function AdminPanel() {
 
   const isSuperAdmin =
     deploymentUtils?.contractState &&
-    decodeCoinPublicKey(deploymentUtils?.contractState?.super_admin) ==
+    decodeCoinPublicKey(deploymentUtils?.contractState?.superAdmin) ==
       parseCoinPublicKeyToHex(
         walletUtils?.state.coinPublicKey as string,
         getZswapNetworkId()
