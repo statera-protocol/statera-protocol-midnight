@@ -11,7 +11,7 @@ import {
   ledger,
   Ledger,
   Witnesses,
-} from "../src/managed/adaStateraProtocol/contract/index.cjs";
+} from "../src/managed/stateraProtocol/contract/index.cjs";
 import { StateraPrivateState, witnesses } from "../src/witnesses";
 import {
   encodeTokenType,
@@ -230,14 +230,14 @@ export class StateraProtocolSimulator {
     );
   }
 
-  //   addAcceptedStableToken(oraclePk: Uint8Array){
-  //     return this.updateStateAndGetLedgerState(
-  //         this.contract.impureCircuits.(
-  //             this.turnContext,
-  //             oraclePk
-  //         )
-  //     )
-  //   }
+    addAcceptedStableToken(oraclePk: Uint8Array){
+      return this.updateStateAndGetLedgerState(
+          this.contract.impureCircuits.addSwapToken(
+              this.turnContext,
+              oraclePk
+          )
+      )
+    }
 
   transferSuperAdminRole(cPK: Uint8Array): Ledger {
     return this.updateStateAndGetLedgerState(

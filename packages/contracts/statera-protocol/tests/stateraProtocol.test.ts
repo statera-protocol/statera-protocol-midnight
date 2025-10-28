@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
-import * as fc from "fast-check";
-import { StateraProtocolSimulator } from "./adaStateraProtocol-setup";
+import { StateraProtocolSimulator } from "./stateraProtocol-setup";
 import {
   convertMapToArray,
   hexStringToUint8Array,
@@ -14,7 +13,7 @@ import {
   Depositor,
   QualifiedCoinInfo,
   Staker,
-} from "../src/managed/adaStateraProtocol/contract/index.cjs";
+} from "../src/managed/stateraProtocol/contract/index.cjs";
 
 const positionStatus = ["inactive", "active", "liquidated"];
 
@@ -267,7 +266,10 @@ describe("Liquidation & Stake Simulation", () => {
     );
     console.log("- Stake TVL:", protocolStakeTVL.value);
     console.log("- Current staker", staker);
-    console.log("- Current cumulative scale factor", stakeLedgerState.cumulativeScalingFactor);
+    console.log(
+      "- Current cumulative scale factor",
+      stakeLedgerState.cumulativeScalingFactor
+    );
     console.log("- Current staker's ID", stakeId);
     console.log(
       "- sUSD token type",
@@ -275,7 +277,7 @@ describe("Liquidation & Stake Simulation", () => {
     );
 
     expect(protocolStakeTVL.value).toBe(5_000_000n);
-    expect(staker.effective_user_balance).toBe(5_000_000n);
+    expect(staker.effectiveUserBalance).toBe(5_000_000n);
 
     // Liquidate position
     const liquidationLedgerState = simulator.liquidatePosition(
@@ -305,7 +307,10 @@ describe("Liquidation & Stake Simulation", () => {
     );
     console.log("- Liquidated deposit ID:", id);
     console.log("- Current depositor:", liquidatedDepositor);
-    console.log("- Current pool status:", positionStatus[liquidatedDepositor.position]);
+    console.log(
+      "- Current pool status:",
+      positionStatus[liquidatedDepositor.position]
+    );
 
     // Check stake reward
     const checkStakeLedgerState = simulator.checkStakeReward();
@@ -323,10 +328,144 @@ describe("Liquidation & Stake Simulation", () => {
       "==========================================================================================================="
     );
     console.log("- Current staker", stakeChecker);
-    console.log("- Current cummulative scaling factor", checkStakeLedgerState.cumulativeScalingFactor);
+    console.log(
+      "- Current cummulative scaling factor",
+      checkStakeLedgerState.cumulativeScalingFactor
+    );
     console.log("- Current stake pool balance", protocolStakeTVL.value);
 
-    expect(stakeChecker.effective_user_balance).toBe(2_000_000n);
-    expect(stakeChecker.stake_reward).toBe(3_000_000n);
+    expect(stakeChecker.effectiveUserBalance).toBe(2_000_000n);
+    expect(stakeChecker.stakeReward).toBe(3_000_000n);
+
+    // Withdraw Stake Reward
+    const withdrawStakeLedgerState = simulator.withdrawStakeReward(3);
+    stakers = convertMapToArray<Staker>(withdrawStakeLedgerState.stakers);
+    protocolStakeTVL = withdrawStakeLedgerState.protocolStakeTVL;
+    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
+      withdrawStakeLedgerState.protocolReserveTVL
+    );
+
+    const { state: stakerWithdrawer } = stakers[0];
+
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "/************************************* WITHDRAW STAKE REWARD 🎁 ***************************************************/"
+    );
+    console.log("After successfully withdrawing stake reward 🎁");
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log("- Current staker", stakerWithdrawer);
+    console.log("- Current reserver pool balance", protocolReserveTVL.length);
+
+    expect(stakerWithdrawer.stakeReward).toBe(0n);
+
+    const unstakeLedgerState = simulator.unstake(2);
+    stakers = convertMapToArray<Staker>(unstakeLedgerState.stakers);
+    protocolStakeTVL = unstakeLedgerState.protocolStakeTVL;
+
+    const { state: unstaker } = stakers[0];
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "/************************************* UNSTAKE 📕 ***************************************************/"
+    );
+    console.log("After successfully unstaking 📕");
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log("- Current staker", unstaker);
+    console.log("- Current stake pool balance", protocolStakeTVL.value);
+
+    expect(unstaker.effectiveUserBalance).toBe(0n);
+  });
+});
+
+describe("1:1 Swap Contract simulation", () => {
+  it("Should swap tDUST for sUSD", () => {
+    let protocolReserveTVL: LedgerMapItem<QualifiedCoinInfo>[];
+
+    const simulator = createStateraProtocol("Swap test contract");
+
+    const swapForSUSDLedgerState = simulator.swapForSUSD(100);
+    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
+      swapForSUSDLedgerState.protocolReserveTVL
+    );
+    const { state: swapState } = protocolReserveTVL[0];
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "/************************************* SWAP STABLECOIN FOR sUSD 💱 ***************************************************/"
+    );
+    console.log("After successfully swapping 💱");
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log("- Current mint count", swapForSUSDLedgerState.mintCounter);
+    console.log(
+      "- Current total sUSD minted",
+      swapForSUSDLedgerState.totalMint
+    );
+    console.log("- Current pool balance", swapState.value);
+
+    expect(swapForSUSDLedgerState.mintCounter).toBe(1n);
+    expect(swapForSUSDLedgerState.totalMint).toBe(100_000_000n);
+    expect(swapState.value).toBe(100_000_000n);
+
+    const addAcceptedStableTokenLedgerState = simulator.addAcceptedStableToken(
+      hexStringToUint8Array("00000000-0000-0000-0000-000000000000")
+    );
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "/************************************* ADD ACCEPTABLE STABLE COIN TO LIST 🎟️ ***************************************************/"
+    );
+    console.log("After successfully adding stablecoin 🎟️");
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "- Current mint count",
+      addAcceptedStableTokenLedgerState.mintCounter
+    );
+    console.log(
+      "- Current total sUSD minted",
+      addAcceptedStableTokenLedgerState.totalMint
+    );
+
+    expect(addAcceptedStableTokenLedgerState.mintCounter).toBe(1n);
+    expect(addAcceptedStableTokenLedgerState.totalMint).toBe(100_000_000n);
+
+    const swapForStablecoinLedgerState = simulator.swapsUSDForStableCoin(2);
+    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
+      swapForStablecoinLedgerState.protocolReserveTVL
+    );
+    const { state: exchangeState } = protocolReserveTVL[0];
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "/************************************* SWAP sUSD FOR STABLECOIN 💱 ***************************************************/"
+    );
+    console.log("After successfully swapping 💱");
+    console.log(
+      "==========================================================================================================="
+    );
+    console.log(
+      "- Current mint count",
+      swapForStablecoinLedgerState.mintCounter
+    );
+    console.log(
+      "- Current total sUSD minted",
+      swapForStablecoinLedgerState.totalMint
+    );
+    console.log("- Current pool balance", exchangeState.value);
+
+    expect(exchangeState.value).toBe(98_000_000n);
   });
 });

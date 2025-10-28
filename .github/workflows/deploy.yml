@@ -131,10 +131,10 @@ jobs:
               echo "❌ No .bzkir files found! Copying manually..."
               
               # Check if source exists
-              if [ -d "packages/contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir" ]; then
+              if [ -d "packages/contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir" ]; then
                 echo "Source zkir folder found, copying all files..."
-                cp -v packages/contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir/*.bzkir packages/ui/dist/zkir/ 2>/dev/null || echo "No .bzkir files in source"
-                cp -v packages/contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir/*.zkir packages/ui/dist/zkir/ 2>/dev/null || echo "No .zkir files in source"
+                cp -v packages/contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir/*.bzkir packages/ui/dist/zkir/ 2>/dev/null || echo "No .bzkir files in source"
+                cp -v packages/contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir/*.zkir packages/ui/dist/zkir/ 2>/dev/null || echo "No .zkir files in source"
                 
                 echo ""
                 echo "After manual copy:"
@@ -149,9 +149,9 @@ jobs:
             echo "❌ zkir folder NOT found in dist! Creating and copying..."
             mkdir -p packages/ui/dist/zkir
             
-            if [ -d "packages/contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir" ]; then
+            if [ -d "packages/contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir" ]; then
               echo "Copying all zkir files..."
-              cp -rv packages/contracts/ada-statera-protocol/dist/managed/adaStateraProtocol/zkir/* packages/ui/dist/zkir/
+              cp -rv packages/contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir/* packages/ui/dist/zkir/
               
               echo ""
               echo "After copy:"

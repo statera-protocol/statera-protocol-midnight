@@ -2,7 +2,7 @@ import {
   ComplianceToken,
   Depositor,
   Staker,
-} from "@statera/ada-statera-protocol";
+} from "@statera/statera-protocol";
 import { Logger } from "pino";
 import {
   DerivedDepositor,

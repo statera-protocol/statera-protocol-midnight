@@ -12,7 +12,7 @@ import ClientSideLiquidationBot from "@/lib/client-side-liquidation-bot";
 import { encodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
-import type { MintMetadata } from "@statera/ada-statera-protocol";
+import type { MintMetadata } from "@statera/statera-protocol";
 import { TrendingUp, DollarSign, Activity, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";

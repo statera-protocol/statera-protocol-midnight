@@ -253,7 +253,7 @@ export function StakingInterface() {
                       <Button>sUSD</Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Staked: {stakePosition?.staker.effective_user_balance || 0}{" "}
+                      Staked: {stakePosition?.staker.effectiveUserBalance || 0}{" "}
                       sUSD
                     </p>
                   </div>
@@ -272,7 +272,7 @@ export function StakingInterface() {
                   </div>
 
                   {stakePosition && parseInt(unstakeAmount) >
-                    stakePosition?.staker.effective_user_balance && (
+                    stakePosition?.staker.effectiveUserBalance && (
                     <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
                       <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <AlertDescription className="text-red-800 dark:text-red-200">
@@ -294,7 +294,7 @@ export function StakingInterface() {
                       !stakePosition
                         ? false
                         : parseInt(unstakeAmount) >
-                          stakePosition.staker.effective_user_balance
+                          stakePosition.staker.effectiveUserBalance
                     }
                     variant="outline"
                   >

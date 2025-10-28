@@ -75,7 +75,7 @@
     "packages/server",
     "packages/api",
     "packages/cli",
-    "packages/contracts/ada-statera-protocol",
+    "packages/contracts/statera-protocol",
     "packages/contracts/dust-statera-protocol",
     "packages/contracts/usdc-statera-protocol"
   ]

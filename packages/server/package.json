@@ -6,7 +6,7 @@
     "dev": "tsx watch src/server.ts"
   },
   "devDependencies": {
-    "@statera/ada-statera-protocol": "workspace:*",
+    "@statera/statera-protocol": "workspace:*",
     "@types/cors": "^2",
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",

@@ -15,7 +15,7 @@ import {
   StateraPrivateState,
   witnesses,
   createPrivateStateraState,
-} from "@statera/ada-statera-protocol";
+} from "@statera/statera-protocol";
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
 

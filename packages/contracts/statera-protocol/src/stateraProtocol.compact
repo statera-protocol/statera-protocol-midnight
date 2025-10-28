@@ -16,7 +16,7 @@ export {
     addTrustedOracle, removeTrustedOraclePk, addAdmin, transferAdminRole, stakers, admins, protocolStakeTVL,
     protocolReserveTVL, superAdmin, liquidationThreshold, MCR, LTV, trustedOracles, swapForsUSD, 
     swapsUSDForToken, sUSDTokenType, mintCounter, totalMint, validCollateralAssetType, liquidationCount, 
-    QualifiedCoinInfo, acceptedSwapTokens, cumulativeScalingFactor
+    QualifiedCoinInfo, acceptedSwapTokens, cumulativeScalingFactor, totalLiquidatedAsset, addSwapToken
 };
 
 /* Describes the status of a user's debt position */
@@ -183,7 +183,7 @@ export circuit withdrawCollateral(amountToWithdraw_: Uint<32>, oraclePrice_: Uin
    assert (disclosedAmtToWithdraw <= withdrawableCollateral, "Can not withdraw more than minimum collateral ratio");
    const balance = metadata.collateral - disclosedAmtToWithdraw;    
    // Send funds and manage change
-   sendFromProtocolReserveAndManageChange(ownPublicKey(), disclosedAmtToWithdraw as Uint<64>, validCollateralAssetType);
+   sendFromReserveAndManageChange(ownPublicKey(), disclosedAmtToWithdraw as Uint<64>, validCollateralAssetType);
 
    const newBorrowLimit = ScaledDivisionFunction((LTV * balance) as Uint<64>, SCALE) as Uint<64>;
    
@@ -306,4 +306,5 @@ export circuit liquidateDebtPosition(
     });
 
     liquidationCount.increment(1);
+    totalLiquidatedAsset = (totalLiquidatedAsset + disclosedCollateralAmount) as Uint<64>;
 }

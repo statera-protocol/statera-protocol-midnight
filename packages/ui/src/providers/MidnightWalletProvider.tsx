@@ -42,7 +42,7 @@ import { Transaction } from "@midnight-ntwrk/ledger";
 import { noProofClient, proofClient } from "./proofProvider";
 import { WrappedZKConfigProvider } from "./zkConfigProvider";
 import toast from "react-hot-toast";
-import type { StateraPrivateState } from "@statera/ada-statera-protocol";
+import type { StateraPrivateState } from "@statera/statera-protocol";
 
 interface WalletAPIType extends WalletAPI {
   address: string | undefined;

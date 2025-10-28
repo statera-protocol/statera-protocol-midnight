@@ -74,7 +74,7 @@ export async function initializeWalletAndAPI(): Promise<void> {
           "ada-statera-protocol",
           "dist",
           "managed",
-          "adaStateraProtocol"
+          "stateraProtocol"
         )
       ),
       proofProvider: httpClientProofProvider(walletConfig.proofServerUri),

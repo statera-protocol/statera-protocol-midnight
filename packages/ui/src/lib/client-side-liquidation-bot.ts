@@ -1,4 +1,4 @@
-import type { MintMetadata } from "@statera/ada-statera-protocol";
+import type { MintMetadata } from "@statera/statera-protocol";
 import { dummyPriceFeed } from "./dummypriceApiResponse";
 
 export interface LiquidationPayload {

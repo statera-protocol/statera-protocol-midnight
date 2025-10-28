@@ -1,5 +1,5 @@
 {
-  "name": "@statera/ada-statera-protocol",
+  "name": "@statera/statera-protocol",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
@@ -16,10 +16,10 @@
     }
   },
   "scripts": {
-    "compact": "compact compile --skip-zk src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
-    "compact-dev": "compact compile src/adaStateraProtocol.compact ./src/managed/adaStateraProtocol",
-    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
-    "prebuild": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/adaStateraProtocol.compact dist",
+    "compact": "compact compile --skip-zk src/stateraProtocol.compact ./src/managed/stateraProtocol",
+    "compact-dev": "compact compile src/stateraProtocol.compact ./src/managed/stateraProtocol",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/stateraProtocol.compact dist",
+    "prebuild": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/stateraProtocol.compact dist",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "yarn build",

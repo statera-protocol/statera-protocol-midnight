@@ -26,7 +26,7 @@ import useMidnightWallet from "@/hookes/useMidnightWallet";
 import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
-import { DebtPositionStatus } from "@statera/ada-statera-protocol";
+import { DebtPositionStatus } from "@statera/statera-protocol";
 import { Alert, AlertDescription } from "../ui/alert";
 
 export function CollateralManager() {

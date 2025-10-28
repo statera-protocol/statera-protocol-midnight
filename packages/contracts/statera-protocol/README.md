@@ -73,7 +73,7 @@ struct Staker {
     id: Bytes<32>;                    // Unique staker identifier
     address: ZswapCoinPublicKey;      // Staker's public key
     stakeAmount: Uint<128>;           // Amount of sUSD staked
-    entry_collateralRewardPerSUSD: Uint<128>;  // Index at stake entry
+    entryCollateralRewardPerSUSD: Uint<128>;  // Index at stake entry
     pending_ADA: Uint<128>;           // Pending liquidation rewards
 }
 ```

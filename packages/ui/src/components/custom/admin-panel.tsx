@@ -20,7 +20,7 @@ import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import toast from "react-hot-toast";
 import ContractUpdateTab from "./update-tab";
 import OrganizationTab from "./organization-tab";
-import { DebtPositionStatus } from "@statera/ada-statera-protocol";
+import { DebtPositionStatus } from "@statera/statera-protocol";
 
 export type AdminActions =
   | "setSUSDType"

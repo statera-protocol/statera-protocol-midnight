@@ -14,6 +14,8 @@ module GlobalProtocolLedgerStates {
 
     export ledger validCollateralAssetType: Bytes<32>;
     export ledger liquidationCount: Counter;
+    /*Tracks total liquidated asset */
+    export ledger totalLiquidatedAsset: Uint<64>;
 
     /* Protocol vitals */
     export ledger liquidationThreshold: Uint<64>; // Set as 110%
@@ -49,7 +51,7 @@ module GlobalProtocolLedgerStates {
         protocolReserveTVL.insertCoin(disclosedCoin.color, coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }
 
-    export circuit sendFromProtocolReserveAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
+    export circuit sendFromReserveAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
         const protocolBalanceToSendFrom = protocolReserveTVL.lookup(coinType);
 
         const sendResult = send(protocolBalanceToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(address), amount);

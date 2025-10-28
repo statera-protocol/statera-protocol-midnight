@@ -6,7 +6,7 @@ import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 import type {
   StateraPrivateState,
-} from "@statera/ada-statera-protocol";
+} from "@statera/statera-protocol";
 import {
   StateraAPI,
   type DeployedStateraAPI,

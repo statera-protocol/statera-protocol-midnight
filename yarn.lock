@@ -3018,22 +3018,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@statera/ada-statera-protocol@workspace:*, @statera/ada-statera-protocol@workspace:packages/contracts/ada-statera-protocol":
-  version: 0.0.0-use.local
-  resolution: "@statera/ada-statera-protocol@workspace:packages/contracts/ada-statera-protocol"
-  dependencies:
-    eslint: "npm:^9.27.0"
-    jest: "npm:^29.7.0"
-    typescript: "npm:^5.8.2"
-    vitest: "npm:^4.0.1"
-  languageName: unknown
-  linkType: soft
-
 "@statera/statera-api@workspace:*, @statera/statera-api@workspace:packages/api":
   version: 0.0.0-use.local
   resolution: "@statera/statera-api@workspace:packages/api"
   dependencies:
-    "@statera/ada-statera-protocol": "workspace:*"
+    "@statera/statera-protocol": "workspace:*"
     "@types/ws": "npm:^8.5.9"
     allure-commandline: "npm:^2.28.0"
     allure-jest: "npm:^2.15.1"
@@ -3051,7 +3040,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@statera/statera-backend-server@workspace:packages/server"
   dependencies:
-    "@statera/ada-statera-protocol": "workspace:*"
+    "@statera/statera-protocol": "workspace:*"
     "@types/cors": "npm:^2"
     "@types/express": "npm:^5.0.3"
     "@types/node": "npm:^24.3.0"
@@ -3063,6 +3052,17 @@ __metadata:
     socket.io: "npm:^4.8.1"
     ts-node-dev: "npm:^2.0.0"
     typescript: "npm:^5.9.2"
+  languageName: unknown
+  linkType: soft
+
+"@statera/statera-protocol@workspace:*, @statera/statera-protocol@workspace:packages/contracts/statera-protocol":
+  version: 0.0.0-use.local
+  resolution: "@statera/statera-protocol@workspace:packages/contracts/statera-protocol"
+  dependencies:
+    eslint: "npm:^9.27.0"
+    jest: "npm:^29.7.0"
+    typescript: "npm:^5.8.2"
+    vitest: "npm:^4.0.1"
   languageName: unknown
   linkType: soft
 
@@ -3081,8 +3081,8 @@ __metadata:
     "@radix-ui/react-switch": "npm:^1.2.5"
     "@radix-ui/react-tabs": "npm:^1.1.12"
     "@radix-ui/react-tooltip": "npm:^1.2.7"
-    "@statera/ada-statera-protocol": "workspace:*"
     "@statera/statera-api": "workspace:*"
+    "@statera/statera-protocol": "workspace:*"
     "@tailwindcss/vite": "npm:^4.1.11"
     "@types/node": "npm:^24.0.4"
     "@types/progress": "npm:^2"
@@ -3138,8 +3138,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@statera/test-cli@workspace:packages/cli"
   dependencies:
-    "@statera/ada-statera-protocol": "workspace:*"
     "@statera/statera-api": "workspace:*"
+    "@statera/statera-protocol": "workspace:*"
     "@types/jest": "npm:^29.5.12"
     "@types/ws": "npm:^8.5.9"
     allure-commandline: "npm:^2.32.0"
