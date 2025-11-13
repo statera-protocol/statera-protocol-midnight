@@ -12,18 +12,18 @@ import { ArrowDownUp, Settings, Info, TrendingUp, Zap, CheckCircle } from "lucid
 export function SwapInterface() {
   const [fromAmount, setFromAmount] = useState("")
   const [toAmount, setToAmount] = useState("")
-  const [fromToken, setFromToken] = useState("ETH")
-  const [toToken, setToToken] = useState("USC")
+  const [fromToken, setFromToken] = useState("tDUST")
+  const [toToken, setToToken] = useState("sUSD")
   const [slippage, setSlippage] = useState("0.5")
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const tokens = [
-    { symbol: "ETH", name: "Ethereum", balance: "12.5", icon: "Ξ", color: "from-purple-500 to-blue-500" },
+    { symbol: "USDT", name: "Tether USD", balance: "12.5", icon: "T", color: "from-purple-500 to-blue-500" },
     { symbol: "USDC", name: "USD Coin", balance: "5,000", icon: "$", color: "from-green-500 to-emerald-500" },
-    { symbol: "WBTC", name: "Wrapped Bitcoin", balance: "0.75", icon: "₿", color: "from-orange-500 to-yellow-500" },
-    { symbol: "USC", name: "StableMint USD", balance: "35,000", icon: "S", color: "from-cyan-500 to-blue-500" },
-    { symbol: "DAI", name: "Dai Stablecoin", balance: "2,500", icon: "◆", color: "from-yellow-500 to-orange-500" },
+    { symbol: "DAI", name: "Dai Stablecoin", balance: "0.75", icon: "◆", color: "from-orange-500 to-yellow-500" },
+    { symbol: "sUSD", name: "Stater USD", balance: "35,000", icon: "$", color: "from-cyan-500 to-blue-500" },
+    { symbol: "TDUST", name: "Dust Coin", balance: "2,500", icon: "₿", color: "from-yellow-500 to-orange-500" },
   ]
 
   const fromTokenData = tokens.find((t) => t.symbol === fromToken)
@@ -52,7 +52,7 @@ export function SwapInterface() {
   const calculateToAmount = () => {
     if (!fromAmount || !fromTokenData || !toTokenData) return "0"
     // Mock calculation
-    const baseRate = 1.5
+    const baseRate = 1;
     return (Number.parseFloat(fromAmount) * baseRate).toFixed(4)
   }
 
@@ -163,8 +163,9 @@ export function SwapInterface() {
                         .map((token) => (
                           <DropdownMenuItem
                             key={token.symbol}
+                            disabled={token.symbol != "TDUST"}
                             onClick={() => setFromToken(token.symbol)}
-                            className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer gap-2"
+                            className={`text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer gap-2 ${token.symbol != "TDUST" ? "opacity-75" : ""}`}
                           >
                             <span className="text-lg">{token.icon}</span>
                             <div>
@@ -228,8 +229,9 @@ export function SwapInterface() {
                         .map((token) => (
                           <DropdownMenuItem
                             key={token.symbol}
+                            disabled={token.symbol != "sUSD"}
                             onClick={() => setToToken(token.symbol)}
-                            className="text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer gap-2"
+                            className={`text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer gap-2 ${token.symbol != "sUSD" ? "opacity-75" : ""}`}
                           >
                             <span className="text-lg">{token.icon}</span>
                             <div>
@@ -243,7 +245,7 @@ export function SwapInterface() {
                 </div>
 
                 <div className="text-xs text-slate-400 text-right">
-                  1 {fromToken} ≈ 1.5 {toToken}
+                  1 {fromToken} ≈ 1 {toToken}
                 </div>
               </div>
 
@@ -283,7 +285,7 @@ export function SwapInterface() {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-300">Exchange Rate</span>
                   <span className="text-white font-medium">
-                    1 {fromToken} = 1.5 {toToken}
+                    1 {fromToken} = 1 {toToken}
                   </span>
                 </div>
 

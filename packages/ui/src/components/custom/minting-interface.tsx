@@ -24,10 +24,10 @@ import {
 } from "lucide-react";
 import useDeployment from "@/hookes/useDeployment";
 import toast from "react-hot-toast";
-import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
-import useMidnightWallet from "@/hookes/useMidnightWallet";
-import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
-import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+// import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+// import useMidnightWallet from "@/hookes/useMidnightWallet";
+// import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
+// import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 
 export function MintingInterface() {
   const [mintAmount, setMintAmount] = useState("");
@@ -35,22 +35,24 @@ export function MintingInterface() {
   const [repayAmount, setRepayAmount] = useState("");
   const [isRepaying, setIsRepaying] = useState<boolean>(false);
   const deploymentCTX = useDeployment();
-  const wallet = useMidnightWallet();
-  const mintPosition =
-    wallet &&
-    deploymentCTX?.contractState?.collateralDepositors.find(
-      (vault) =>
-        decodeCoinPublicKey(vault.id) ==
-        parseCoinPublicKeyToHex(
-          wallet?.state.coinPublicKey as string,
-          getZswapNetworkId()
-        )
-    );
+  // const wallet = useMidnightWallet();
+  // const mintPosition =
+  //   wallet &&
+  //   deploymentCTX?.contractState?.collateralDepositors.find(
+  //     (vault) =>
+  //       decodeCoinPublicKey(vault.id) ==
+  //       parseCoinPublicKeyToHex(
+  //         wallet?.state.coinPublicKey as string,
+  //         getZswapNetworkId()
+  //       )
+  //   );
 
   const minHFator = 1;
 
+  if(typeof deploymentCTX?.contractState == "undefined" || typeof deploymentCTX.privateState == "undefined") return;
+
   const calculateHealthFactor = (amount: string, action: "mint" | "repay") => {
-    if (!amount) return mintPosition?.depositor.hFactor;
+    if (!amount) return deploymentCTX?.healthFactor;
     const numAmount = Number.parseFloat(amount);
     if (action === "mint") {
       return Math.round(
@@ -79,7 +81,7 @@ export function MintingInterface() {
     try {
       if (
         action == "mint" &&
-        amount > Number(mintPosition?.depositor.borrowLimit)
+        amount > Number(deploymentCTX.privateState?.mint_metadata.borrowLimit)
       ) {
         // handle case where amount is greater than debt
         toast.error("Mint greater than borrow limit is not allowed");
@@ -88,7 +90,7 @@ export function MintingInterface() {
 
       const result =
         action == "mint"
-          ? await deploymentCTX?.stateraApi?.mint_sUSD(amount)
+          ? await deploymentCTX?.stateraApi?.mintSUSD(amount)
           : await deploymentCTX?.stateraApi?.repay(amount);
       action == "mint" ? setIsMinting(false) : setIsRepaying(false);
       if (result?.public.status === "SucceedEntirely") {
@@ -168,7 +170,7 @@ export function MintingInterface() {
                       <Button variant="outline">sUSD</Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Maximum mintable: {mintPosition?.depositor.borrowLimit}{" "}
+                      Maximum mintable: {deploymentCTX.privateState?.mint_metadata.borrowLimit}{" "}
                       sUSD
                     </p>
                   </div>
@@ -180,7 +182,7 @@ export function MintingInterface() {
                       onClick={() =>
                         setMintAmount(
                           String(
-                            0.25 * Number(mintPosition?.depositor.borrowLimit)
+                            0.25 * Number(deploymentCTX.privateState?.mint_metadata.borrowLimit)
                           )
                         )
                       }
@@ -193,7 +195,7 @@ export function MintingInterface() {
                       onClick={() =>
                         setMintAmount(
                           String(
-                            0.5 * Number(mintPosition?.depositor.borrowLimit)
+                            0.5 * Number(deploymentCTX.privateState?.mint_metadata.borrowLimit)
                           )
                         )
                       }
@@ -206,7 +208,7 @@ export function MintingInterface() {
                       onClick={() =>
                         setMintAmount(
                           String(
-                            0.75 * Number(mintPosition?.depositor.borrowLimit)
+                            0.75 * Number(deploymentCTX.privateState?.mint_metadata.borrowLimit)
                           )
                         )
                       }
@@ -218,7 +220,7 @@ export function MintingInterface() {
                       size="sm"
                       onClick={() =>
                         setMintAmount(
-                          String(mintPosition?.depositor.borrowLimit as bigint)
+                          String(deploymentCTX.privateState?.mint_metadata.borrowLimit as bigint)
                         )
                       }
                     >
@@ -227,7 +229,7 @@ export function MintingInterface() {
                   </div>
 
                   {parseInt(mintAmount) >
-                    Number(mintPosition?.depositor.borrowLimit) && (
+                    Number(deploymentCTX.privateState?.mint_metadata.borrowLimit) && (
                     <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
                       <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <AlertDescription className="text-red-800 dark:text-red-200">
@@ -374,7 +376,7 @@ export function MintingInterface() {
                 <div className="flex justify-between text-sm">
                   <span>Available to Mint</span>
                   <span className="font-medium text-green-600">
-                    {mintPosition?.depositor.borrowLimit} sUSD
+                    {deploymentCTX.privateState?.mint_metadata.borrowLimit} sUSD
                   </span>
                 </div>
               </div>
@@ -385,17 +387,17 @@ export function MintingInterface() {
                 <div className="flex justify-between text-sm">
                   <span>Current Ratio</span>
                   <Badge variant="secondary">
-                    {mintPosition?.depositor.hFactor}%
+                    {deploymentCTX?.healthFactor}%
                   </Badge>
                 </div>
                 <Progress
                   value={
-                    (Number(mintPosition?.depositor.hFactor) - minHFator) / 2
+                    (Number(deploymentCTX?.healthFactor) - minHFator) / 2
                   }
                   className="h-2"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {Number(mintPosition?.depositor.hFactor) - minHFator}% above
+                  {Number(deploymentCTX?.healthFactor) - minHFator}% above
                   minimum
                 </p>
               </div>

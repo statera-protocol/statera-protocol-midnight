@@ -40,16 +40,15 @@ const createStateraProtocol = (testName: string): StateraProtocolSimulator => {
 describe("Depositor Action Simulation", () => {
   it("Should simulate deposit, minting, repayment, redepositing and liquidation", () => {
     let privateState: StateraPrivateState;
-    let protocolReserveTVL: LedgerMapItem<QualifiedCoinInfo>[];
+    let protocolReserveTVL: QualifiedCoinInfo;
     let depoistors: LedgerMapItem<Depositor>[];
 
     const simulator = createStateraProtocol("Depositor test contract");
     // Deposit collateral
     const depositLedgerState = simulator.depositCollateral(3);
     privateState = simulator.getPrivateState();
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      depositLedgerState.protocolReserveTVL
-    );
+    protocolReserveTVL = depositLedgerState.protocolReserveTVL;
+
     depoistors = convertMapToArray<Depositor>(depositLedgerState.depositors);
 
     console.log(
@@ -63,19 +62,16 @@ describe("Depositor Action Simulation", () => {
       "==========================================================================================================="
     );
     const { state: depositor, key: id } = depoistors[0];
-    const { state: dTVL } = protocolReserveTVL[0];
 
     console.log("- Deposit ID:", id);
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", depositLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor:", depositor);
     console.log("- Current pool status:", positionStatus[depositor.position]);
-    console.log("- Current reserver tvl balance", dTVL.value);
+    console.log("- Current reserver tvl balance", protocolReserveTVL.value);
 
-    expect(depositLedgerState.protocolReserveTVL.size()).toBe(1n);
-    expect(dTVL.value).toBe(3_000_000n);
+    expect(protocolReserveTVL.value).toBe(3_000_000n);
     expect(privateState.mint_metadata.collateral).toBe(3_000_000n);
     expect(depositor.position).toBe(DebtPositionStatus.inactive);
 
@@ -97,7 +93,6 @@ describe("Depositor Action Simulation", () => {
     );
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", depositLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor", mintState);
     console.log("- Current deposit status", positionStatus[mintState.position]);
@@ -127,7 +122,6 @@ describe("Depositor Action Simulation", () => {
     );
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", repaymentLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor", repaymentState);
     console.log(
@@ -138,16 +132,14 @@ describe("Depositor Action Simulation", () => {
     const withdrawLedgerState = simulator.withdrawCollateral(3);
     privateState = simulator.getPrivateState();
     depoistors = convertMapToArray<Depositor>(repaymentLedgerState.depositors);
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      withdrawLedgerState.protocolReserveTVL
-    );
+    protocolReserveTVL = withdrawLedgerState.protocolReserveTVL;
 
     const { state: withdrawalState } = depoistors[0];
 
     expect(privateState.mint_metadata.borrowLimit).toBe(0n);
     expect(privateState.mint_metadata.debt).toBe(0n);
     expect(privateState.mint_metadata.collateral).toBe(0n);
-    expect(withdrawLedgerState.protocolReserveTVL.size()).toBe(0n);
+    expect(withdrawLedgerState.protocolReserveTVL.value).toBe(0n);
 
     console.log(
       "==========================================================================================================="
@@ -161,7 +153,6 @@ describe("Depositor Action Simulation", () => {
     );
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", withdrawLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor", withdrawalState);
     console.log(
@@ -174,7 +165,7 @@ describe("Depositor Action Simulation", () => {
 describe("Liquidation & Stake Simulation", () => {
   it("Should deposit, mint, stake and liquidate", () => {
     let privateState: StateraPrivateState;
-    let protocolReserveTVL: LedgerMapItem<QualifiedCoinInfo>[];
+    let protocolReserveTVL: QualifiedCoinInfo;
     let protocolStakeTVL: QualifiedCoinInfo;
     let depoistors: LedgerMapItem<Depositor>[];
     let stakers: LedgerMapItem<Staker>[];
@@ -185,9 +176,8 @@ describe("Liquidation & Stake Simulation", () => {
     // Deposit collateral
     const depositLedgerState = simulator.depositCollateral(3);
     privateState = simulator.getPrivateState();
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      depositLedgerState.protocolReserveTVL
-    );
+    protocolReserveTVL = depositLedgerState.protocolReserveTVL;
+
     depoistors = convertMapToArray<Depositor>(depositLedgerState.depositors);
 
     console.log(
@@ -201,19 +191,16 @@ describe("Liquidation & Stake Simulation", () => {
       "==========================================================================================================="
     );
     const { state: depositor, key: id } = depoistors[0];
-    const { state: dTVL } = protocolReserveTVL[0];
 
     console.log("- Deposit ID:", id);
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", depositLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor:", depositor);
     console.log("- Current pool status:", positionStatus[depositor.position]);
-    console.log("- Current reserver tvl balance", dTVL.value);
+    console.log("- Current reserver tvl balance", protocolReserveTVL.value);
 
-    expect(depositLedgerState.protocolReserveTVL.size()).toBe(1n);
-    expect(dTVL.value).toBe(3_000_000n);
+    expect(protocolReserveTVL.value).toBe(3_000_000n);
     expect(privateState.mint_metadata.collateral).toBe(3_000_000n);
     expect(depositor.position).toBe(DebtPositionStatus.inactive);
 
@@ -235,7 +222,6 @@ describe("Liquidation & Stake Simulation", () => {
     );
     console.log("- Collateral:", privateState.mint_metadata.collateral);
     console.log("- Borrow Limit:", privateState.mint_metadata.borrowLimit);
-    console.log("- TVL size:", depositLedgerState.protocolReserveTVL.size());
     console.log("- Debt:", privateState.mint_metadata.debt);
     console.log("- Current depositor", mintState);
     console.log("- Current deposit status", positionStatus[mintState.position]);
@@ -341,9 +327,7 @@ describe("Liquidation & Stake Simulation", () => {
     const withdrawStakeLedgerState = simulator.withdrawStakeReward(3);
     stakers = convertMapToArray<Staker>(withdrawStakeLedgerState.stakers);
     protocolStakeTVL = withdrawStakeLedgerState.protocolStakeTVL;
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      withdrawStakeLedgerState.protocolReserveTVL
-    );
+    protocolReserveTVL = withdrawStakeLedgerState.protocolReserveTVL;
 
     const { state: stakerWithdrawer } = stakers[0];
 
@@ -358,7 +342,7 @@ describe("Liquidation & Stake Simulation", () => {
       "==========================================================================================================="
     );
     console.log("- Current staker", stakerWithdrawer);
-    console.log("- Current reserver pool balance", protocolReserveTVL.length);
+    console.log("- Current reserver pool balance", protocolReserveTVL.value);
 
     expect(stakerWithdrawer.stakeReward).toBe(0n);
 
@@ -386,15 +370,13 @@ describe("Liquidation & Stake Simulation", () => {
 
 describe("1:1 Swap Contract simulation", () => {
   it("Should swap tDUST for sUSD", () => {
-    let protocolReserveTVL: LedgerMapItem<QualifiedCoinInfo>[];
-
+    let protocolSwapTVL: LedgerMapItem<QualifiedCoinInfo>[];
     const simulator = createStateraProtocol("Swap test contract");
 
     const swapForSUSDLedgerState = simulator.swapForSUSD(100);
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      swapForSUSDLedgerState.protocolReserveTVL
+    protocolSwapTVL = convertMapToArray<QualifiedCoinInfo>(
+      swapForSUSDLedgerState.protocolSwapTVL
     );
-    const { state: swapState } = protocolReserveTVL[0];
     console.log(
       "==========================================================================================================="
     );
@@ -410,11 +392,11 @@ describe("1:1 Swap Contract simulation", () => {
       "- Current total sUSD minted",
       swapForSUSDLedgerState.totalMint
     );
-    console.log("- Current pool balance", swapState.value);
+    console.log("- Current pool balance", protocolSwapTVL[0].state.value);
 
     expect(swapForSUSDLedgerState.mintCounter).toBe(1n);
     expect(swapForSUSDLedgerState.totalMint).toBe(100_000_000n);
-    expect(swapState.value).toBe(100_000_000n);
+    expect(protocolSwapTVL[0].state.value).toBe(100_000_000n);
 
     const addAcceptedStableTokenLedgerState = simulator.addAcceptedStableToken(
       hexStringToUint8Array("00000000-0000-0000-0000-000000000000")
@@ -442,10 +424,10 @@ describe("1:1 Swap Contract simulation", () => {
     expect(addAcceptedStableTokenLedgerState.totalMint).toBe(100_000_000n);
 
     const swapForStablecoinLedgerState = simulator.swapsUSDForStableCoin(2);
-    protocolReserveTVL = convertMapToArray<QualifiedCoinInfo>(
-      swapForStablecoinLedgerState.protocolReserveTVL
+    protocolSwapTVL = convertMapToArray<QualifiedCoinInfo>(
+      swapForStablecoinLedgerState.protocolSwapTVL
     );
-    const { state: exchangeState } = protocolReserveTVL[0];
+    const { state: exchangeState } = protocolSwapTVL[0];
     console.log(
       "==========================================================================================================="
     );

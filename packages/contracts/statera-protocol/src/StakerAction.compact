@@ -94,8 +94,11 @@ module StakerAction {
         
         // Sends the pending ADA to the staker
         const amountToSend = disclose(amount) as Uint<64>;
-        sendFromReserveAndManageChange(ownPublicKey(), amountToSend, validCollateralAssetType);
-        
+        const sendResult = send(protocolReserveTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), amountToSend);
+   
+        sendResult.change.is_some ? 
+        protocolReserveTVL.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self())) :
+        protocolReserveTVL.resetToDefault();
         // Updates the user's pending ADA upon interaction to avoid looping to update individually
         const stakeRewardBalance = stakeReward - disclose(amountToSend);
         const updatedStakePosition = Staker {
@@ -129,6 +132,6 @@ module StakerAction {
         };
 
         stakers.insert(ownPublicKey().bytes, updatedStakePosition);
-    }
+    
 
 }

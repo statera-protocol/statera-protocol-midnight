@@ -22,6 +22,8 @@ import {
   witnesses,
   type CoinInfo,
   createPrivateStateraState,
+  QualifiedCoinInfo,
+  Depositor,
 } from "@statera/statera-protocol";
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
@@ -128,12 +130,12 @@ export class StateraAPI implements DeployedStateraAPI {
           superAdmin: ledgerState.superAdmin,
           sUSDTokenType: ledgerState.sUSDTokenType,
           protocolStakeTVL: ledgerState.protocolStakeTVL.value,
-          protocolReserveTVL: utils.createDerivedReservedPoolArray(ledgerState.protocolReserveTVL),
+          protocolReserveTVL: ledgerState.protocolReserveTVL.value,
           liquidationThreshold: ledgerState.liquidationThreshold,
-          collateralDepositors: utils.createDerivedDepositorsArray(
+          collateralDepositors: utils.createArrayFromLedgerMapping<Depositor>(
             ledgerState.depositors
           ),
-          stakers: utils.createDerivedStakersArray(ledgerState.stakers),
+          stakers: utils.createArrayFromLedgerMapping(ledgerState.stakers),
           noOfDepositors: ledgerState.depositors.size(),
           mintMetadata: privateState?.mint_metadata,
           secrete_key: privateState?.secrete_key,
@@ -166,9 +168,9 @@ export class StateraAPI implements DeployedStateraAPI {
       privateStateId: stateraPrivateStateId,
       args: [
         utils.randomNonceBytes(32, logger),
-        110n,
-        80n,
-        120n,
+        BigInt(1.10 * 1_000_000), //110% expressed as a bigint in units
+        BigInt(0.80 * 1_000_000),
+        BigInt(1.20 * 1_000_000),
         encodeTokenType(nativeToken()),
       ],
     });
@@ -238,10 +240,10 @@ export class StateraAPI implements DeployedStateraAPI {
   ): Promise<FinalizedCallTxData<StateraContract, "depositToCollateralPool">> {
     this.logger?.info(`Depositing collateral...`);
     // First update the private state for the minter
-    const deposit_unit_specks = amount * 1_000_000;
+    const deposit_in_unit = amount * 1_000_000;
     const txData =
       await this.allReadyDeployedContract.callTx.depositToCollateralPool(
-        this.coin(deposit_unit_specks),
+        this.coin(deposit_in_unit),
         utils.getTestComplianceToken(),
         BigInt(0.95 * this.SCALE)
       );
@@ -265,10 +267,11 @@ export class StateraAPI implements DeployedStateraAPI {
     amount: number
   ): Promise<FinalizedCallTxData<StateraContract, "repay">> {
     this.logger?.info("Repaying debt asset...");
+    const amount_in_units = amount * this.SCALE;
     // Construct tx with dynamic coin data
     const txData = await this.allReadyDeployedContract.callTx.repay(
-      this.sUSD_coin(amount),
-      BigInt(amount)
+      this.sUSD_coin(amount_in_units),
+      BigInt(amount_in_units)
     );
 
     this.logger?.trace({
@@ -309,11 +312,15 @@ export class StateraAPI implements DeployedStateraAPI {
     LVT: number,
     MCR: number
   ): Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">> {
+    const LiquidationThresholdInPercentage = (liquidation_threshold / 100) * this.SCALE;
+    const LVTInPercentage = (LVT / 100) * this.SCALE;
+    const MCRInPercentage = (MCR / 100) * this.SCALE;
+
     const txData =
       await this.allReadyDeployedContract.callTx.resetProtocolConfig(
-        BigInt(liquidation_threshold),
-        BigInt(LVT),
-        BigInt(MCR)
+        BigInt(LiquidationThresholdInPercentage),
+        BigInt(LVTInPercentage),
+        BigInt(MCRInPercentage)
       );
 
     this.logger?.trace({
@@ -421,10 +428,11 @@ export class StateraAPI implements DeployedStateraAPI {
     _oraclePrice: number
   ): Promise<FinalizedCallTxData<StateraContract, "withdrawCollateral">> {
     this.logger?.info("Withdrawing collateral asset...");
+    const amount_in_units = amountToWithdraw * this.SCALE;
     // Construct tx with dynamic coin data
     const txData =
       await this.allReadyDeployedContract.callTx.withdrawCollateral(
-        BigInt(amountToWithdraw),
+        BigInt(amount_in_units),
         BigInt(_oraclePrice)
       );
 
@@ -446,9 +454,9 @@ export class StateraAPI implements DeployedStateraAPI {
     mint_amount: number
   ): Promise<FinalizedCallTxData<StateraContract, "mintSUSD">> {
     this.logger?.trace(`Minting sUSD for your loan position...`);
-
+    const amount_in_units = mint_amount * this.SCALE;
     const txData = await this.allReadyDeployedContract.callTx.mintSUSD(
-      BigInt(mint_amount)
+      BigInt(amount_in_units)
     );
     this.logger?.trace({
       transactionAdded: {
@@ -468,10 +476,11 @@ export class StateraAPI implements DeployedStateraAPI {
     amount: number
   ): Promise<FinalizedCallTxData<StateraContract, "depositToStabilityPool">> {
     this.logger?.info("Depositing to stake pool...");
+    const amount_in_units = amount * this.SCALE;
     // Construct tx with dynamic coin data
     const txData =
       await this.allReadyDeployedContract.callTx.depositToStabilityPool(
-        this.sUSD_coin(amount)
+        this.sUSD_coin(amount_in_units)
       );
 
     this.logger?.trace({
@@ -512,10 +521,11 @@ export class StateraAPI implements DeployedStateraAPI {
     this.logger?.info(
       `Withdrawing ${amountToWithdraw} of your stake reward...`
     );
+    const amount_in_units = amountToWithdraw * this.SCALE;
     // Construct tx with dynamic coin data
     const txData =
       await this.allReadyDeployedContract.callTx.withdrawStakeReward(
-        BigInt(amountToWithdraw)
+        BigInt(amount_in_units)
       );
 
     this.logger?.trace({
@@ -537,9 +547,10 @@ export class StateraAPI implements DeployedStateraAPI {
     this.logger?.info(
       `Withdrawing ${amount} from your effective stake pool balance...`
     );
+    const amount_in_units = amount * this.SCALE;
     // Construct tx with dynamic coin data
     const txData = await this.allReadyDeployedContract.callTx.withdrawStake(
-      BigInt(amount)
+      BigInt(amount_in_units)
     );
 
     this.logger?.trace({
@@ -558,8 +569,9 @@ export class StateraAPI implements DeployedStateraAPI {
   async swapForSUSD(
     swap_amt: number
   ): Promise<FinalizedCallTxData<StateraContract, "swapForsUSD">> {
+    const amount_in_units = swap_amt * this.SCALE;
     const txData = await this.allReadyDeployedContract.callTx.swapForsUSD(
-      this.coin(swap_amt)
+      this.coin(amount_in_units)
     );
     this.logger?.info(`Swapping ${swap_amt} of stablecoin to sUSD...`);
     this.logger?.trace({
@@ -578,8 +590,9 @@ export class StateraAPI implements DeployedStateraAPI {
   async swapSUSDForStableCoin(
     swap_amt: number
   ): Promise<FinalizedCallTxData<StateraContract, "swapsUSDForToken">> {
+    const amount_in_units = swap_amt * this.SCALE;
     const txData = await this.allReadyDeployedContract.callTx.swapsUSDForToken(
-      this.coin(swap_amt),
+      this.coin(amount_in_units),
       encodeTokenType(nativeToken())
     );
     this.logger?.trace({
@@ -593,7 +606,7 @@ export class StateraAPI implements DeployedStateraAPI {
       },
     });
 
-     return txData;
+    return txData;
   }
 
   // Used to get the private state from the wallets privateState Provider

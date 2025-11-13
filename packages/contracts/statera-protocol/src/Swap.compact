@@ -7,7 +7,7 @@ module Swap{
     export circuit swapForsUSD(coin_: CoinInfo): Uint<128>{
         const disclosedCoin = disclose(coin_);
         /* Recieve token */
-        recieveAndAddToProtocolReserveTVL(disclosedCoin);
+        recieveAndAddToSwapPoolTVL(disclosedCoin);
         
         /* Mint sUSD */
         const newNonce = evolveNonce(mintCounter, nonce);
@@ -31,7 +31,7 @@ module Swap{
         //Send immediately to desired address
         sendImmediate(disclosedCoin, burnAddrs, disclosedCoin.value);
         /* Send stablecoin and manage balance */
-        sendFromReserveAndManageChange(ownPublicKey(), disclosedCoin.value as Uint<64>, disclosedTokenType);
+        sendFromSwapPoolAndManageChange(ownPublicKey(), disclosedCoin.value as Uint<64>, disclosedTokenType);
 
         return disclosedCoin.value;
     }

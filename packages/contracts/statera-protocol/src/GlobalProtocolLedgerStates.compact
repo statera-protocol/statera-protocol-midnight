@@ -31,7 +31,9 @@ module GlobalProtocolLedgerStates {
     export ledger stateritePersUSD: Uint<64>; // Unit of statera USD (1000000 stateritePersUSD => 1sUSD)
 
     /* Tracks assets stored within the smart contract */
-    export ledger protocolReserveTVL: Map<Bytes<32>, QualifiedCoinInfo>;
+    export ledger protocolReserveTVL: QualifiedCoinInfo;
+    export ledger protocolSwapTVL: Map<Bytes<32>, QualifiedCoinInfo>;
+
     /* Mapping to keep track of sUSD coin input into the stakePool */
     export ledger protocolStakeTVL: QualifiedCoinInfo;
 
@@ -39,26 +41,26 @@ module GlobalProtocolLedgerStates {
 
 
     /**** Helper functions for managing protocol reserve funds ****/
-    export circuit recieveAndAddToProtocolReserveTVL(disclosedCoin: CoinInfo): []{
+    export circuit recieveAndAddToSwapPoolTVL(disclosedCoin: CoinInfo): []{
         // Recieves the coin into the contract
         receive(disclosedCoin);
 
         //Update protocol
-        const coinToInsert = protocolReserveTVL.member(disclosedCoin.color) ?
-        mergeCoinImmediate(protocolReserveTVL.lookup(disclosedCoin.color), disclosedCoin) : 
+        const coinToInsert = protocolSwapTVL.member(disclosedCoin.color) ?
+        mergeCoinImmediate(protocolSwapTVL.lookup(disclosedCoin.color), disclosedCoin) : 
         disclosedCoin;
 
-        protocolReserveTVL.insertCoin(disclosedCoin.color, coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+        protocolSwapTVL.insertCoin(disclosedCoin.color, coinToInsert, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }
 
-    export circuit sendFromReserveAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
-        const protocolBalanceToSendFrom = protocolReserveTVL.lookup(coinType);
+    export circuit sendFromSwapPoolAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
+        const protocolBalanceToSendFrom = protocolSwapTVL.lookup(coinType);
 
         const sendResult = send(protocolBalanceToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(address), amount);
         if(sendResult.change.is_some){
-            protocolReserveTVL.insertCoin(coinType, sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+            protocolSwapTVL.insertCoin(coinType, sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
         }else{
-            protocolReserveTVL.remove(coinType);
+            protocolSwapTVL.remove(coinType);
         }
     }
 }

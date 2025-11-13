@@ -16,7 +16,7 @@ export {
     addTrustedOracle, removeTrustedOraclePk, addAdmin, transferAdminRole, stakers, admins, protocolStakeTVL,
     protocolReserveTVL, superAdmin, liquidationThreshold, MCR, LTV, trustedOracles, swapForsUSD, 
     swapsUSDForToken, sUSDTokenType, mintCounter, totalMint, validCollateralAssetType, liquidationCount, 
-    QualifiedCoinInfo, acceptedSwapTokens, cumulativeScalingFactor, totalLiquidatedAsset, addSwapToken
+    QualifiedCoinInfo, acceptedSwapTokens, cumulativeScalingFactor, totalLiquidatedAsset, addSwapToken, protocolSwapTVL
 };
 
 /* Describes the status of a user's debt position */
@@ -67,7 +67,7 @@ export circuit depositToCollateralPool(coin: CoinInfo, complianceToken_: Complia
     assert (trustedOracles.member(disclosedComplianceToken.tokenData.oraclePk), "Can not create position: Unauthorized KYC provider");
 
     /* Receives coin */
-    recieveAndAddToProtocolReserveTVL(disclosedCoin);
+    receive(disclosedCoin);
 
     //Checks if there is an existing deposit vault for the user and updates the vault state
     if(depositors.member(depositId)){
@@ -91,6 +91,8 @@ export circuit depositToCollateralPool(coin: CoinInfo, complianceToken_: Complia
             metadataHash: newMetadataHash,
             entryOraclePrice: disclose(oraclePrice_)
         });
+
+        protocolReserveTVL.writeCoin(mergeCoinImmediate(protocolReserveTVL, disclosedCoin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
     }else{
         const depositorId = generateUserId(disclose(secrete_key()));
         const newBorrowLimit = ScaledDivisionFunction((LTV * disclosedCoin.value as Uint<64>) as Uint<64>, SCALE) as Uint<64>;
@@ -101,6 +103,8 @@ export circuit depositToCollateralPool(coin: CoinInfo, complianceToken_: Complia
         };
         const metadataHash = hashMintMetadata(metadata, depositId);
         set_mint_metadata(metadata);
+
+        protocolReserveTVL.writeCoin(disclosedCoin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
 
         depositors.insert(depositId, Depositor{
         ...default<Depositor>,
@@ -182,8 +186,12 @@ export circuit withdrawCollateral(amountToWithdraw_: Uint<32>, oraclePrice_: Uin
    // Asserts that the amount to withdraw is not greater than the collateral
    assert (disclosedAmtToWithdraw <= withdrawableCollateral, "Can not withdraw more than minimum collateral ratio");
    const balance = metadata.collateral - disclosedAmtToWithdraw;    
-   // Send funds and manage change
-   sendFromReserveAndManageChange(ownPublicKey(), disclosedAmtToWithdraw as Uint<64>, validCollateralAssetType);
+
+   const sendResult = send(protocolReserveTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmtToWithdraw as Uint<64>);
+
+   sendResult.change.is_some ? 
+   protocolReserveTVL.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self())) :
+   protocolReserveTVL.resetToDefault();
 
    const newBorrowLimit = ScaledDivisionFunction((LTV * balance) as Uint<64>, SCALE) as Uint<64>;
    

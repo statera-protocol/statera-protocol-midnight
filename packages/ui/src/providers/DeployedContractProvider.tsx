@@ -1,12 +1,8 @@
 import useMidnightWallet from "@/hookes/useMidnightWallet";
-import {
-  decodeCoinPublicKey,
-} from "@midnight-ntwrk/compact-runtime";
+import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
 import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
-import type {
-  StateraPrivateState,
-} from "@statera/statera-protocol";
+import type { Depositor, StateraPrivateState } from "@statera/statera-protocol";
 import {
   StateraAPI,
   type DeployedStateraAPI,
@@ -32,6 +28,9 @@ export interface DeploymentProvider {
   readonly contractState: DerivedStateraContractState | undefined;
   onJoinContract: () => Promise<void>;
   clearError: () => void;
+  readonly SCALE_FACTOR: bigint;
+  readonly currentDepositor: Depositor | null;
+  readonly healthFactor: bigint | null;
 }
 
 export const DeployedContractContext = createContext<DeploymentProvider | null>(
@@ -42,6 +41,10 @@ interface DeployedContractProviderProps extends PropsWithChildren {
   logger?: Logger;
   contractAddress?: string;
 }
+
+// interface EnhancedStateraPrivateState extends StateraPrivateState {
+//   hFactor: bigint;
+// }
 
 export const DeployedContractProvider = ({
   children,
@@ -56,11 +59,16 @@ export const DeployedContractProvider = ({
   const [contractState, setContractState] = useState<
     DerivedStateraContractState | undefined
   >(undefined);
+  const [currentDepositor, setCurrentDepositor] = useState<Depositor | null>(
+    null
+  );
   const [hasJoined, setHasJoined] = useState<boolean>(false);
   const [privateState, setPrivateState] = useState<StateraPrivateState | null>(
     null
   );
+  const [healthFactor, setHealthFactor] = useState<bigint | null>(null);
   const [userRole, setUserRole] = useState<"admin" | "user">("user");
+  const SCALE_FACTOR = 1_000_000n;
 
   // Use the custom hook instead of useContext directly
   const walletContext = useMidnightWallet();
@@ -123,6 +131,7 @@ export const DeployedContractProvider = ({
     return () => stateSubscription.unsubscribe();
   }, [stateraApi]);
 
+  // Fetches and provides an extended user private state, then set the current depositor from the list of depositors
   useEffect(() => {
     if (!stateraApi && !walletContext) return;
     (async function fetchPrivateState() {
@@ -131,11 +140,22 @@ export const DeployedContractProvider = ({
       );
 
       if (userPrivateState) {
+        //Update global states
         setPrivateState(userPrivateState);
+
+        if (contractState && currentDepositor) {
+          setHealthFactor(
+            (contractState?.liquidationThreshold *
+              (userPrivateState?.mint_metadata.collateral *
+                currentDepositor.entryOraclePrice)) /
+              (userPrivateState.mint_metadata.debt * SCALE_FACTOR)
+          );
+        }
       } else return;
     })();
   }, [walletContext?.privateStateProvider, contractState]);
 
+  //Sets the user role whenever the onchain state changes
   useEffect(() => {
     if (!contractState) return;
 
@@ -143,6 +163,15 @@ export const DeployedContractProvider = ({
       walletContext?.state.coinPublicKey as string,
       getZswapNetworkId()
     );
+
+    const vault = contractState.collateralDepositors.find(
+      (vault) => decodeCoinPublicKey(vault.id) == walletAddressHex
+    );
+    console.log("vault", vault);
+    if (!vault) return;
+
+    //Update the current depositor
+    setCurrentDepositor(vault.state);
 
     const role =
       decodeCoinPublicKey(contractState.superAdmin) == walletAddressHex ||
@@ -163,10 +192,13 @@ export const DeployedContractProvider = ({
     error,
     stateraApi,
     onJoinContract,
-    clearError,   
+    clearError,
     contractState,
     privateState,
     userRole,
+    SCALE_FACTOR,
+    currentDepositor,
+    healthFactor
   };
 
   return (

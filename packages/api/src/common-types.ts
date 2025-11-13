@@ -4,6 +4,7 @@ import {
   StateraPrivateState,
   Depositor,
   Staker,
+  QualifiedCoinInfo,
 } from "@statera/statera-protocol";
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
@@ -31,11 +32,11 @@ export type DerivedStateraContractState = {
   readonly totalMint: bigint;
   readonly superAdmin: Uint8Array;
   readonly sUSDTokenType: Uint8Array;
-  readonly protocolReserveTVL: DerivedReservedPoolTotal[];
+  readonly protocolReserveTVL: bigint;
   readonly protocolStakeTVL: bigint;
   readonly liquidationThreshold: bigint;
-  readonly collateralDepositors: DerivedDepositor[];
-  readonly stakers: DerivedStaker[];
+  readonly collateralDepositors: LedgerMapItem<Depositor>[];
+  readonly stakers: LedgerMapItem<Staker>[];
   readonly noOfDepositors: bigint;
   readonly admins: Uint8Array[];
   readonly LVT: bigint;
@@ -69,3 +70,8 @@ export type DerivedReservedPoolTotal = {
     mt_index: bigint;
   };
 };
+
+export interface LedgerMapItem<T>{
+  id: Uint8Array,
+  state: T
+}

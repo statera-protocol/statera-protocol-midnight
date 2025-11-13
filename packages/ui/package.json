@@ -7,8 +7,8 @@
     "dev": "vite",
     "start": "http-server --port 0 ./dist",
     "start-dev": "http-server -port 0 ./dist",
-    "build": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir ./dist/zkir",
-    "prebuild": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/ada-statera-protocol/dist/managed/stateraProtocol/keys ./dist/keys && cp -r ../contracts/ada-statera-protocol/dist/managed/stateraProtocol/zkir ./dist/zkir",
+    "build": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/statera-protocol/dist/managed/stateraProtocol/zkir ./dist/zkir",
+    "prebuild": "rm -rf dist && tsc && vite build --mode testnet && cp -r ../contracts/statera-protocol/dist/managed/stateraProtocol/keys ./dist/keys && cp -r ../contracts/statera-protocol/dist/managed/stateraProtocol/zkir ./dist/zkir",
     "lint": "eslint .",
     "preview": "vite preview"
   },

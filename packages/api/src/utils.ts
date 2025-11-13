@@ -9,6 +9,7 @@ import {
   DerivedReservedPoolTotal,
   DerivedStaker,
   DerivedTrustedOracle,
+  LedgerMapItem,
 } from "./common-types.js";
 import {} from "@midnight-ntwrk/midnight-js-utils"
 
@@ -103,16 +104,16 @@ export function hexStringToUint8Array(hexStr: string): Uint8Array {
   return uuidToUint8Array(hexStr);
 }
 
-export function createDerivedDepositorsArray(collateralDepositors: {
+export function createArrayFromLedgerMapping<T>(mapping: {
   isEmpty(): boolean;
   size(): bigint;
-  member(key_0: Uint8Array): boolean;
-  lookup(key_0: Uint8Array): Depositor;
-  [Symbol.iterator](): Iterator<[Uint8Array, Depositor]>;
-}): DerivedDepositor[] {
-  return Array.from(collateralDepositors).map(([key, depositor]) => ({
+  member(key_0: Uint8Array<ArrayBufferLike>): boolean;
+  lookup(key_0: Uint8Array): T;
+  [Symbol.iterator](): Iterator<[Uint8Array, T]>;
+}): LedgerMapItem<T>[] {
+  return Array.from(mapping).map(([key, item]) => ({
     id: key,
-    depositor: depositor,
+    state: item,
   }));
 }
 
@@ -124,49 +125,6 @@ export function createDerivedAdminArray(admins: {
 }): Uint8Array[] {
   return Array.from(admins);
 }
-
-export function createDerivedStakersArray(stakers: {
-  isEmpty(): boolean;
-  size(): bigint;
-  member(key_0: Uint8Array): boolean;
-  lookup(key_0: Uint8Array): Staker;
-  [Symbol.iterator](): Iterator<[Uint8Array, Staker]>;
-}): DerivedStaker[] {
-  return Array.from(stakers).map(([key, staker]) => ({
-    id: key,
-    staker: staker,
-  }));
-}
-
-export function createDerivedReservedPoolArray(protocolReserveTVL: {
-    isEmpty(): boolean;
-    size(): bigint;
-    member(key_0: Uint8Array<ArrayBufferLike>): boolean;
-    lookup(key_0: Uint8Array): {
-        nonce: Uint8Array;
-        color: Uint8Array;
-        value: bigint;
-        mt_index: bigint;
-    };
-    [Symbol.iterator](): Iterator<[Uint8Array, {
-        nonce: Uint8Array;
-        color: Uint8Array;
-        value: bigint;
-        mt_index: bigint;
-    }]>;
-}): DerivedReservedPoolTotal[] {
-  return Array.from(protocolReserveTVL).map(([key, entry]) => ({
-    // prefer the stored color from the entry, fallback to the map key
-    color: entry?.color ?? key,
-    balance: {
-      nonce: entry.nonce,
-      color: entry.color,
-      value: entry.value,
-      mt_index: entry.mt_index,
-    },
-  }));
-}
-
 
 export function createDerivedOraclesArray(trustedOracles: {
   isEmpty(): boolean;
@@ -212,7 +170,5 @@ export function pad(s: string, n: number): Uint8Array {
 export default {
   randomNonceBytes,
   uint8arraytostring,
-  createDerivedDepositorsArray,
-  createDerivedStakersArray,
   pad,
 };

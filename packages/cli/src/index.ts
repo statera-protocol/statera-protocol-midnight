@@ -15,7 +15,7 @@ import {
   type Ledger,
   ledger,
   StateraPrivateState,
-} from "@statera/ada-statera-protocol";
+} from "@statera/statera-protocol";
 import {
   parseCoinPublicKeyToHex,
   toHex,

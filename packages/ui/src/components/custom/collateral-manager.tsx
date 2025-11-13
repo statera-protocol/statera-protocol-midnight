@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -23,9 +23,9 @@ import {
 import useDeployment from "@/hookes/useDeployment";
 import toast from "react-hot-toast";
 import useMidnightWallet from "@/hookes/useMidnightWallet";
-import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
-import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
-import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+// import { decodeCoinPublicKey } from "@midnight-ntwrk/compact-runtime";
+// import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
+// import { getZswapNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { DebtPositionStatus } from "@statera/statera-protocol";
 import { Alert, AlertDescription } from "../ui/alert";
 
@@ -37,6 +37,12 @@ export function CollateralManager() {
   const [isDepositing, setIsDepositing] = useState<boolean>(false);
   const [isWithdrawing, setIsWithdrawing] = useState<boolean>(false);
   const minDeposit = 1;
+
+  if (
+    typeof deploymentCTX?.contractState == "undefined" ||
+    typeof deploymentCTX.privateState == "undefined"
+  )
+    return;
 
   const collateralTypes = [
     {
@@ -65,27 +71,27 @@ export function CollateralManager() {
     },
   ];
 
-  const depositPosition = useCallback(() => {
-    if (
-      !deploymentCTX?.privateState ||
-      !deploymentCTX?.contractState?.collateralDepositors
-    )
-      return;
-    const walletAddressHex = parseCoinPublicKeyToHex(
-      walletContext?.state.coinPublicKey as string,
-      getZswapNetworkId()
-    );
-    const vault = deploymentCTX.contractState.collateralDepositors.find(
-      (vault) => decodeCoinPublicKey(vault.id) == walletAddressHex
-    );
-    console.log("vault", vault);
-    if (!vault) return;
-    return vault;
-  }, [
-    deploymentCTX?.privateState,
-    walletContext?.state,
-    deploymentCTX?.contractState?.collateralDepositors,
-  ])();
+  // const depositPosition = useCallback(() => {
+  //   if (
+  //     !deploymentCTX?.privateState ||
+  //     !deploymentCTX?.contractState?.collateralDepositors
+  //   )
+  //     return;
+  //   const walletAddressHex = parseCoinPublicKeyToHex(
+  //     walletContext?.state.coinPublicKey as string,
+  //     getZswapNetworkId()
+  //   );
+  //   const vault = deploymentCTX.contractState.collateralDepositors.find(
+  //     (vault) => decodeCoinPublicKey(vault.id) == walletAddressHex
+  //   );
+  //   console.log("vault", vault);
+  //   if (!vault) return;
+  //   return vault;
+  // }, [
+  //   deploymentCTX?.privateState,
+  //   walletContext?.state,
+  //   deploymentCTX?.contractState?.collateralDepositors,
+  // ])();
 
   const handleCreateOrWithdrawFromPosition = async (
     amount: number,
@@ -97,9 +103,7 @@ export function CollateralManager() {
       if (!walletContext) return;
       const tx =
         action == "deposit"
-          ? await deploymentCTX?.stateraApi?.depositToCollateralPool(
-              Math.round(amount)
-            )
+          ? await deploymentCTX?.stateraApi?.depositToCollateralPool(amount)
           : await deploymentCTX?.stateraApi?.withdrawCollateral(
               amount,
               orace_price as number
@@ -196,7 +200,7 @@ export function CollateralManager() {
                       </div>
                       <p className="text-xs text-slate-400">
                         Approx. deposit: {depositAmount || 0} tDUST ($
-                        {Math.round(Number(depositAmount))})
+                        {Number(depositAmount)})
                       </p>
                     </div>
 
@@ -341,7 +345,7 @@ export function CollateralManager() {
                     }
                     onClick={() =>
                       handleCreateOrWithdrawFromPosition(
-                        parseInt(withdrawAmount),
+                        Number.parseFloat(withdrawAmount),
                         "withdraw",
                         1
                       )
@@ -366,7 +370,7 @@ export function CollateralManager() {
         </div>
 
         <div className="lg:col-span-1 space-y-6">
-          {depositPosition ? (
+          {deploymentCTX.currentDepositor ? (
             <Card className="bg-slate-800/50 backdrop-blur-xl border-slate-700/50">
               <CardHeader>
                 <CardTitle className="text-white flex items-center justify-between">
@@ -375,10 +379,10 @@ export function CollateralManager() {
                     Your Position
                   </div>
                   <Badge variant="secondary">
-                    {depositPosition.depositor.position ==
+                    {deploymentCTX.currentDepositor.position ==
                     DebtPositionStatus.inactive
                       ? "Inactive"
-                      : depositPosition.depositor.position ==
+                      : deploymentCTX.currentDepositor.position ==
                           DebtPositionStatus.active
                         ? "Active"
                         : "Closed"}
@@ -402,7 +406,7 @@ export function CollateralManager() {
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-300">Borrow Limit</span>
                     <Badge className="bg-green-900/30 text-green-400 border-green-500/30">
-                      {depositPosition.depositor.borrowLimit}
+                      {deploymentCTX.privateState.mint_metadata.borrowLimit}
                     </Badge>
                   </div>
                 </div>
@@ -413,7 +417,7 @@ export function CollateralManager() {
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-300">Health Factor</span>
                     <span className="text-green-400 font-medium">
-                      {depositPosition.depositor.hFactor}
+                      {deploymentCTX?.healthFactor}
                     </span>
                   </div>
                   <Progress value={85} className="h-2 bg-slate-700" />

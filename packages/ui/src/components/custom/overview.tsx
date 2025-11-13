@@ -36,8 +36,8 @@ export function Overview() {
   const deploymentStateProvider = deploymentCtx?.stateraApi?.state;
   const boardOverview$ = deploymentStateProvider?.pipe(
     map((state) => ({
-      collateralTVL: state.reservePoolTotal.value,
-      stakePoolTotal: state.stakePoolTotal,
+      collateralTVL: state.protocolReserveTVL,
+      stakePoolTotal: state.protocolStakeTVL,
       totalMint: state.totalMint,
       liquidationThreshold: state.liquidationThreshold,
     })),
@@ -61,7 +61,6 @@ export function Overview() {
       try {
         await deploymentCtx?.onJoinContract();
         setIsLoading(false);
-
       } catch (error) {
         setIsLoading(false);
         const errMsg =
@@ -77,26 +76,29 @@ export function Overview() {
     const subscritption = boardOverview$?.subscribe((value) =>
       setBoardState(value)
     );
-
-    // Intialize client-side liquidation monitoring bot
-    const bot = new ClientSideLiquidationBot(
-      import.meta.env.VITE_SERVER_SIDE_BOT_CONNECTION_URL,
-      deploymentCtx?.privateState?.mint_metadata as MintMetadata,
-      Number(deploymentCtx?.contractState?.liquidationThreshold),
-      encodeCoinPublicKey(
-        parseCoinPublicKeyToHex(
-          walletCtx?.state.coinPublicKey as string,
-          getZswapNetworkId()
+    let bot: ClientSideLiquidationBot | undefined;
+    console.log("private state", deploymentCtx.privateState);
+    if (typeof deploymentCtx.privateState != "undefined") {
+      // Intialize client-side liquidation monitoring bot
+      const bot = new ClientSideLiquidationBot(
+        import.meta.env.VITE_SERVER_SIDE_BOT_CONNECTION_URL,
+        deploymentCtx?.privateState?.mint_metadata as MintMetadata,
+        Number(deploymentCtx?.contractState?.liquidationThreshold),
+        encodeCoinPublicKey(
+          parseCoinPublicKeyToHex(
+            walletCtx?.state.coinPublicKey as string,
+            getZswapNetworkId()
+          )
         )
-      )
-    );
-  
-    //Start monitoring
-    bot.startMonitoring();
+      );
+
+      //Start monitoring
+      bot.startMonitoring();
+    }
 
     return () => {
-      subscritption?.unsubscribe()
-      bot.stopMonitoring()
+      subscritption?.unsubscribe();
+      bot?.stopMonitoring();
     };
   }, [deploymentCtx?.stateraApi]);
 
@@ -131,7 +133,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                `${Number(deploymentCtx?.contractState?.reservePoolTotal.value) / 1_000_000} tDUST`
+                `${Number(deploymentCtx?.contractState?.protocolReserveTVL) / 1_000_000} tDUST`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}
@@ -179,7 +181,7 @@ export function Overview() {
           <CardContent>
             <div className="text-2xl font-bold text-white mb-1">
               {deploymentCtx?.contractState !== undefined ? (
-                `${Number(deploymentCtx?.contractState?.stakePoolTotal)} sUSD`
+                `${Number(deploymentCtx?.contractState?.protocolStakeTVL / deploymentCtx.SCALE_FACTOR)} sUSD`
               ) : (
                 <Loader2 className="animate-spin w-10 h-10 text-blue-500" />
               )}

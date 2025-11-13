@@ -253,7 +253,7 @@ export function StakingInterface() {
                       <Button>sUSD</Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Staked: {stakePosition?.staker.effectiveUserBalance || 0}{" "}
+                      Staked: {stakePosition?.state.effectiveUserBalance || 0}{" "}
                       sUSD
                     </p>
                   </div>
@@ -272,7 +272,7 @@ export function StakingInterface() {
                   </div>
 
                   {stakePosition && parseInt(unstakeAmount) >
-                    stakePosition?.staker.effectiveUserBalance && (
+                    stakePosition?.state.effectiveUserBalance && (
                     <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
                       <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                       <AlertDescription className="text-red-800 dark:text-red-200">
@@ -294,7 +294,7 @@ export function StakingInterface() {
                       !stakePosition
                         ? false
                         : parseInt(unstakeAmount) >
-                          stakePosition.staker.effectiveUserBalance
+                          stakePosition.state.effectiveUserBalance
                     }
                     variant="outline"
                   >
@@ -330,7 +330,7 @@ export function StakingInterface() {
                   <div className="flex justify-between text-sm">
                     <span>Pending Rewards</span>
                     <span className="font-medium text-green-600">
-                      {stakePosition.staker.stake_reward} tDUST
+                      {stakePosition.state.stakeReward} tDUST
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -340,7 +340,7 @@ export function StakingInterface() {
                   <div className="flex justify-between text-sm">
                     <span>Total Earned</span>
                     <span className="font-medium">
-                      {stakePosition.staker.stake_reward} sUSD
+                      {stakePosition.state.stakeReward} sUSD
                     </span>
                   </div>
                 </div>
@@ -361,7 +361,7 @@ export function StakingInterface() {
                     </div>
                   )}
                 </Button>
-                {stakePosition && stakePosition.staker.stake_reward > 0 && (
+                {stakePosition && stakePosition.state.stakeReward > 0 && (
                   <Button
                     onClick={() =>
                       handleStakeInteraction(
@@ -407,7 +407,7 @@ export function StakingInterface() {
                 <div className="flex justify-between text-sm">
                   <span>Total Staked</span>
                   <span className="font-medium">
-                    {deploymentCTX?.contractState?.stakePoolTotal} sUSD
+                    {deploymentCTX?.contractState?.protocolStakeTVL} sUSD
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

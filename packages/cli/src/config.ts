@@ -18,7 +18,7 @@ export const currentDir = path.resolve(new URL(import.meta.url).pathname, '..');
 export class TestnetLocalConfig implements Config {
   privateStateStoreName = "statera-private-state";
   logDir = path.resolve(currentDir, '..', 'logs', 'testnet-local', `${new Date().toISOString()}.log`);
-  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'ada-statera-protocol', 'dist', 'managed', 'adaStateraProtocol');
+  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'statera-protocol', 'dist', 'managed', 'stateraProtocol');
   indexer = 'http://127.0.0.1:8088/api/v1/graphql';
   indexerWS = 'ws://127.0.0.1:8088/api/v1/graphql/ws';
   node = 'http://127.0.0.1:9944';
@@ -32,7 +32,7 @@ export class TestnetLocalConfig implements Config {
 export class StandaloneConfig implements Config {
   privateStateStoreName = "statera-private-state"
   logDir = path.resolve(currentDir, '..', 'logs', 'standalone', `${new Date().toISOString()}.log`);
-  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'ada-statera-protocol', 'dist', 'managed', 'adaStateraProtocol');
+  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'statera-protocol', 'dist', 'managed', 'stateraProtocol');
   indexer = 'http://127.0.0.1:8088/api/v1/graphql';
   indexerWS = 'ws://127.0.0.1:8088/api/v1/graphql/ws';
   node = 'http://127.0.0.1:9944';
@@ -46,7 +46,7 @@ export class StandaloneConfig implements Config {
 export class TestnetRemoteConfig implements Config {
   privateStateStoreName = "statera-private-state"
   logDir = path.resolve(currentDir, '..', 'logs', 'testnet-remote', `${new Date().toISOString()}.log`);
-  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'ada-statera-protocol', 'dist', 'managed', 'adaStateraProtocol');
+  zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'statera-protocol', 'dist', 'managed', 'stateraProtocol');
   indexer = 'https://indexer-rs.testnet-02.midnight.network/api/v1/graphql';
   indexerWS = 'wss://indexer-rs.testnet-02.midnight.network/api/v1/graphql/ws';
   node = 'https://rpc.testnet-02.midnight.network';
