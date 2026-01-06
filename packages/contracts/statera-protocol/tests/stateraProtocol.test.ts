@@ -11,9 +11,9 @@ import { LedgerMapItem } from "./common-types";
 import {
   DebtPositionStatus,
   Depositor,
-  QualifiedCoinInfo,
+  QualifiedShieldedCoinInfo,
   Staker,
-} from "../src/managed/stateraProtocol/contract/index.cjs";
+} from "../src/managed/stateraProtocol/contract/index.js";
 
 const positionStatus = ["inactive", "active", "liquidated"];
 
@@ -40,7 +40,7 @@ const createStateraProtocol = (testName: string): StateraProtocolSimulator => {
 describe("Depositor Action Simulation", () => {
   it("Should simulate deposit, minting, repayment, redepositing and liquidation", () => {
     let privateState: StateraPrivateState;
-    let protocolReserveTVL: QualifiedCoinInfo;
+    let protocolReserveTVL: QualifiedShieldedCoinInfo;
     let depoistors: LedgerMapItem<Depositor>[];
 
     const simulator = createStateraProtocol("Depositor test contract");
@@ -165,8 +165,8 @@ describe("Depositor Action Simulation", () => {
 describe("Liquidation & Stake Simulation", () => {
   it("Should deposit, mint, stake and liquidate", () => {
     let privateState: StateraPrivateState;
-    let protocolReserveTVL: QualifiedCoinInfo;
-    let protocolStakeTVL: QualifiedCoinInfo;
+    let protocolReserveTVL: QualifiedShieldedCoinInfo;
+    let protocolStakeTVL: QualifiedShieldedCoinInfo;
     let depoistors: LedgerMapItem<Depositor>[];
     let stakers: LedgerMapItem<Staker>[];
 
@@ -370,11 +370,11 @@ describe("Liquidation & Stake Simulation", () => {
 
 describe("1:1 Swap Contract simulation", () => {
   it("Should swap tDUST for sUSD", () => {
-    let protocolSwapTVL: LedgerMapItem<QualifiedCoinInfo>[];
+    let protocolSwapTVL: LedgerMapItem<QualifiedShieldedCoinInfo>[];
     const simulator = createStateraProtocol("Swap test contract");
 
     const swapForSUSDLedgerState = simulator.swapForSUSD(100);
-    protocolSwapTVL = convertMapToArray<QualifiedCoinInfo>(
+    protocolSwapTVL = convertMapToArray<QualifiedShieldedCoinInfo>(
       swapForSUSDLedgerState.protocolSwapTVL
     );
     console.log(
@@ -424,7 +424,7 @@ describe("1:1 Swap Contract simulation", () => {
     expect(addAcceptedStableTokenLedgerState.totalMint).toBe(100_000_000n);
 
     const swapForStablecoinLedgerState = simulator.swapsUSDForStableCoin(2);
-    protocolSwapTVL = convertMapToArray<QualifiedCoinInfo>(
+    protocolSwapTVL = convertMapToArray<QualifiedShieldedCoinInfo>(
       swapForStablecoinLedgerState.protocolSwapTVL
     );
     const { state: exchangeState } = protocolSwapTVL[0];

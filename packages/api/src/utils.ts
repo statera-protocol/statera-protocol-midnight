@@ -25,13 +25,13 @@ export const randomNonceBytes = (
 
 export function uint8arraytostring(array: Uint8Array): string {
   // Debug logging
-  console.log(
-    "Converting array:",
-    Array.from(array)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("")
-  );
-  console.log("Array length:", array.length);
+  // console.log(
+  //   "Converting array:",
+  //   Array.from(array)
+  //     .map((b) => b.toString(16).padStart(2, "0"))
+  //     .join("")
+  // );
+  // console.log("Array length:", array.length);
 
   if (array.length < 16) {
     throw new Error(
@@ -44,10 +44,10 @@ export function uint8arraytostring(array: Uint8Array): string {
 
   // Check if all bytes are zero (invalid UUID)
   if (uuidBytes.every((byte) => byte === 0)) {
-    // Instead of throwing, return a default or handle gracefully
-    console.warn(
-      "Received all-zero UUID bytes, this might indicate uninitialized data"
-    );
+    // // Instead of throwing, return a default or handle gracefully
+    // console.warn(
+    //   "Received all-zero UUID bytes, this might indicate uninitialized data"
+    // );
     return "00000000-0000-0000-0000-000000000000"; // Return null UUID
     // Or throw with more context:
     // throw new Error(`Invalid UUID: all bytes are zero. Full array: ${Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('')}`);

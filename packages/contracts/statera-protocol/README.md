@@ -92,7 +92,7 @@ enum DebtPositionStatus {
 
 ### For Depositors
 
-#### `depositToCollateralPool(coin: CoinInfo, _depositId: Bytes<32>)`
+#### `depositToCollateralPool(coin: ShieldedCoinInfo, _depositId: Bytes<32>)`
 Deposit collateral tokens to create a new borrowing position.
 
 **Parameters:**
@@ -128,7 +128,7 @@ Withdraw collateral from a position.
 - User must own the position
 - Sufficient collateral must be available
 
-#### `repay(coin: CoinInfo, _depositId: Bytes<32>, _amountToRepay: Uint<32>)`
+#### `repay(coin: ShieldedCoinInfo, _depositId: Bytes<32>, _amountToRepay: Uint<32>)`
 Repay minted sUSD tokens to reduce debt.
 
 **Parameters:**
@@ -143,7 +143,7 @@ Repay minted sUSD tokens to reduce debt.
 
 ### For Stakers
 
-#### `depositToStabilityPool(coin: CoinInfo)`
+#### `depositToStabilityPool(coin: ShieldedCoinInfo)`
 Stake sUSD tokens in the stability pool to earn liquidation rewards.
 
 **Parameters:**

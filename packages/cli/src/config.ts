@@ -47,9 +47,9 @@ export class TestnetRemoteConfig implements Config {
   privateStateStoreName = "statera-private-state"
   logDir = path.resolve(currentDir, '..', 'logs', 'testnet-remote', `${new Date().toISOString()}.log`);
   zkConfigPath = path.resolve(currentDir, '..', '..', 'contracts', 'statera-protocol', 'dist', 'managed', 'stateraProtocol');
-  indexer = 'https://indexer-rs.testnet-02.midnight.network/api/v1/graphql';
-  indexerWS = 'wss://indexer-rs.testnet-02.midnight.network/api/v1/graphql/ws';
-  node = 'https://rpc.testnet-02.midnight.network';
+  indexer = 'https://indexer.preview.midnight.network/api/v3/graphql';
+  indexerWS = 'wss://indexer.preview.midnight.network/api/v3/graphql';
+  node = 'https://rpc.preview.midnight.network';
   proofServer = 'http://midnight-proof-server-alb-1996898234.eu-north-1.elb.amazonaws.com:6300/';
 
   setNetworkId() {
@@ -57,6 +57,3 @@ export class TestnetRemoteConfig implements Config {
   }
 }
 
-//proof-server-1:   http://13.53.62.251:6300/
-
-//proof-server-2:  http://51.20.55.91:6300/

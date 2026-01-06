@@ -1,7 +1,7 @@
 import {
   Ledger,
   MintMetadata,
-} from "./managed/stateraProtocol/contract/index.cjs";
+} from "./managed/stateraProtocol/contract/index.js";
 import { WitnessContext } from "@midnight-ntwrk/compact-runtime";
 
 export interface StateraPrivateState {

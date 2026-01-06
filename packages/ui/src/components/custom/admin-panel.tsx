@@ -29,6 +29,7 @@ export type AdminActions =
   | "transfer"
   | "add_oracle"
   | "remove_oracle";
+
 export type UpdatePayload = {
   MCR: number;
   liquidation_threshold: number;
@@ -76,14 +77,15 @@ export function AdminPanel() {
     try {
       switch (action) {
         case "setSUSDType": {
-          txResult = await deploymentUtils.stateraApi.setSUSDColor();
+          txResult = await deploymentUtils.stateraApi.setSUSDColor(parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId()));
           break;
         }
 
         case "add": {
           if (typeof payload === "string") {
             txResult = await deploymentUtils.stateraApi.addAdmin(
-              parseCoinPublicKeyToHex(payload, getZswapNetworkId())
+              parseCoinPublicKeyToHex(payload, getZswapNetworkId()),
+              parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId())
             );
           } else {
             throw new Error("Invalid payload for add action: expected string");
@@ -94,7 +96,7 @@ export function AdminPanel() {
         case "remove_oracle": {
           if (typeof payload === "string") {
             txResult =
-              await deploymentUtils.stateraApi.addTrustedOracle(payload);
+              await deploymentUtils.stateraApi.addTrustedOracle(payload, parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId()));
           } else {
             throw new Error("Invalid payload for add action: expected string");
           }
@@ -104,7 +106,7 @@ export function AdminPanel() {
         case "add_oracle": {
           if (typeof payload === "string") {
             txResult =
-              await deploymentUtils.stateraApi.removeTrustedOracle(payload);
+              await deploymentUtils.stateraApi.removeTrustedOracle(payload, parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId()));
           } else {
             throw new Error("Invalid payload for add action: expected string");
           }
@@ -114,7 +116,8 @@ export function AdminPanel() {
         case "transfer": {
           if (typeof payload === "string") {
             txResult = await deploymentUtils.stateraApi.transferSuperAdminRole(
-              parseCoinPublicKeyToHex(payload, getZswapNetworkId())
+              parseCoinPublicKeyToHex(payload, getZswapNetworkId()),
+              parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId())
             );
           } else {
             throw new Error("Invalid payload for add action: expected string");
@@ -127,7 +130,8 @@ export function AdminPanel() {
             txResult = await deploymentUtils.stateraApi.reset(
               payload.liquidation_threshold,
               payload.LVT,
-              payload.MCR
+              payload.MCR,
+              parseCoinPublicKeyToHex(walletUtils?.state.coinPublicKey as string, getZswapNetworkId())
             );
           } else {
             throw new Error(
@@ -195,7 +199,7 @@ export function AdminPanel() {
               {
                 deploymentUtils.contractState.collateralDepositors.filter(
                   (deposit) =>
-                    deposit.depositor.position == DebtPositionStatus.active
+                    deposit.state.position == DebtPositionStatus.active
                 ).length
               }
             </div>
@@ -231,7 +235,7 @@ export function AdminPanel() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              {deploymentUtils.contractState.reservePoolTotal.value / BigInt(1_000_000)} tDUST
+              {deploymentUtils.contractState.protocolReserveTVL / BigInt(1_000_000)} tDUST
             </div>
             <p className="text-xs text-muted-foreground text-slate-400">
               <span className="text-green-600">{12}</span> from last month

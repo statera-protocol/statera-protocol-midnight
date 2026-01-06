@@ -4,7 +4,7 @@ services:
     image: "midnight-proof-server:prebaked"
     command: ["midnight-proof-server", "--network", "undeployed", "--verbose"]
     ports:
-      - "6300"
+      - "6300" 
     environment:
       RUST_BACKTRACE: "full"
   

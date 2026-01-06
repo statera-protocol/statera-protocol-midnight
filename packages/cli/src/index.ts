@@ -26,7 +26,7 @@ import {
   getZswapNetworkId,
 } from "@midnight-ntwrk/midnight-js-network-id";
 import * as Rx from "rxjs";
-import { type Wallet } from "@midnight-ntwrk/wallet-api";
+import { WalletState, type Wallet } from "@midnight-ntwrk/wallet-api";
 import type {
   StartedDockerComposeEnvironment,
   DockerComposeEnvironment,
@@ -34,9 +34,10 @@ import type {
 import { type Resource, WalletBuilder } from "@midnight-ntwrk/wallet";
 import { Transaction as ZswapTransaction } from "@midnight-ntwrk/zswap";
 import {
+  encodeCoinPublicKey,
   nativeToken,
   Transaction,
-  type CoinInfo,
+  type ShieldedCoinInfo,
   type TransactionId,
 } from "@midnight-ntwrk/ledger";
 import {
@@ -81,6 +82,7 @@ const DEPLOY_OR_JOIN_QUESTION = `
 const resolve = async (
   providers: StateraContractProviders,
   rli: Interface,
+  wallet: WalletState,
   logger: Logger
 ): Promise<StateraAPI | null> => {
   let api: StateraAPI | null = null;
@@ -98,7 +100,7 @@ const resolve = async (
       case "2":
         api = await StateraAPI.joinStateraContract(
           providers,
-          await rli.question("What is the contract address (in hex)?"),
+          await rli.question("What is the contract address (in hex)?  "),
           logger
         );
         logger.info(
@@ -215,7 +217,8 @@ const circuit_main_loop = async (
   rli: Interface,
   logger: Logger
 ): Promise<void> => {
-  const stateraApi = await resolve(providers, rli, logger);
+  const walletState = await Rx.firstValueFrom(wallet.state());
+  const stateraApi = await resolve(providers, rli, walletState, logger);
   if (stateraApi === null) return;
 
   let currentState: DerivedStateraContractState | undefined;
@@ -283,7 +286,7 @@ const circuit_main_loop = async (
           );
           logger.info("Initiating mint operation...");
           await stateraApi.mintSUSD
-          (mintAmount);
+            (mintAmount);
 
           // Critical: Wait for wallet to sync and reflect minted tokens
           logger.info("Waiting for wallet to sync after minting...");
@@ -380,7 +383,9 @@ const circuit_main_loop = async (
         case "13": {
           // New option to manually check wallet state
           logger.info("Setting sUSDTokenType...");
-          await stateraApi.setSUSDColor();
+          await stateraApi.setSUSDColor(
+            parseCoinPublicKeyToHex(await rli.question("Copy and past your coin publick key: "), getZswapNetworkId())
+          );
           logger.info(
             "Waiting for wallet to sync after setting sUSDTokenType..."
           );
@@ -445,7 +450,8 @@ const circuit_main_loop = async (
             "Enter coin public key of the new super admin: "
           );
           await stateraApi.transferSuperAdminRole(
-            parseCoinPublicKeyToHex(addrss, getZswapNetworkId())
+            parseCoinPublicKeyToHex(addrss, getZswapNetworkId()),
+            await rli.question("Copy and past your coin publick key: ")
           );
 
           // Wait for wallet to sync after withdrawal
@@ -459,7 +465,7 @@ const circuit_main_loop = async (
 
         case "18": {
           const addrss = await rli.question("Enter new oracle public key: ");
-          await stateraApi.addTrustedOracle(addrss);
+          await stateraApi.addTrustedOracle(addrss, parseCoinPublicKeyToHex(await rli.question("Copy and past your coin publick key: "), getZswapNetworkId()));
 
           // Wait for wallet to sync after withdrawal
           logger.info(
@@ -472,7 +478,7 @@ const circuit_main_loop = async (
 
         case "19": {
           const addrss = await rli.question("Enter oracle public key to remove: ");
-          await stateraApi.removeTrustedOracle(addrss);
+          await stateraApi.removeTrustedOracle(addrss, parseCoinPublicKeyToHex(await rli.question("Copy and past your coin publick key: "), getZswapNetworkId()));
 
           // Wait for wallet to sync after withdrawal
           logger.info(
@@ -501,7 +507,7 @@ export const createWalletAndMidnightProvider = async (
     encryptionPublicKey: state.encryptionPublicKey,
     balanceTx(
       tx: UnbalancedTransaction,
-      newCoins: CoinInfo[]
+      newCoins: ShieldedCoinInfo[]
     ): Promise<BalancedTransaction> {
       return wallet
         .balanceTransaction(
@@ -861,6 +867,7 @@ export const buildWalletAndWaitForFunds = async (
   const state = await Rx.firstValueFrom(wallet.state());
   logger.info(`Your wallet seed is: ${seed}`);
   logger.info(`Your wallet address is: ${state.address}`);
+  logger.info(`Your wallet encoded coin public key is: ${state.coinPublicKey}`);
   let balance = state.balances[nativeToken()];
   if (balance === undefined || balance === 0n) {
     logger.info(`Your wallet balance is: 0`);
@@ -993,7 +1000,7 @@ export const run = async (
           config.indexerWS
         ),
         zkConfigProvider: new NodeZkConfigProvider<never>(config.zkConfigPath),
-        proofProvider: httpClientProofProvider(config.proofServer),
+        proofProvider: httpClientProofProvider<string>(config.proofServer) as any,
         walletProvider: walletAndMidnightProvider,
         midnightProvider: walletAndMidnightProvider,
       };
@@ -1025,7 +1032,7 @@ export const run = async (
             logger.info("Goodbye");
             process.exit(0);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   }

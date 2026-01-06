@@ -8,7 +8,6 @@ import {
 } from "./common-types.js";
 import {
   ContractAddress,
-  encodeCoinPublicKey,
 } from "@midnight-ntwrk/compact-runtime";
 import {
   deployContract,
@@ -18,16 +17,16 @@ import {
 import {
   Contract,
   ledger,
-  StateraPrivateState,
+  StateraPrivateState,  
   witnesses,
-  type CoinInfo,
+  type ShieldedCoinInfo,
   createPrivateStateraState,
-  QualifiedCoinInfo,
   Depositor,
 } from "@statera/statera-protocol";
 import { type Logger } from "pino";
 import * as utils from "./utils.js";
 import {
+  encodeCoinPublicKey,
   encodeTokenType,
   nativeToken,
   tokenType,
@@ -66,22 +65,27 @@ export interface DeployedStateraAPI {
   reset: (
     liquidation_threshold: number,
     LVT: number,
-    MCR: number
+    MCR: number,
+    cpk: string
   ) => Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">>;
   addAdmin: (
-    addrs: string
+    newUserCpk: string,
+    cpk: string
   ) => Promise<FinalizedCallTxData<StateraContract, "addAdmin">>;
-  setSUSDColor: () => Promise<
+  setSUSDColor: (cpk: string) => Promise<
     FinalizedCallTxData<StateraContract, "setSUSDTokenType">
   >;
   transferSuperAdminRole: (
-    addrs: string
-  ) => Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">>;
+    newUserCpk: string,
+    cpk: string
+  ) => Promise<FinalizedCallTxData<StateraContract, "transferSuperAdminRole">>;
   addTrustedOracle: (
-    oraclePk: string
+    oraclePk: string,
+    cpk: string
   ) => Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">>;
   removeTrustedOracle: (
-    oraclePk: string
+    oraclePk: string,
+    cpk: string
   ) => Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">>;
 }
 
@@ -157,14 +161,11 @@ export class StateraAPI implements DeployedStateraAPI {
     logger?: Logger
   ): Promise<StateraAPI> {
     logger?.info("deploy contract");
-    /**
-     * Should deploy a new contract to the blockchain
-     * Return the newly deployed contract
-     * Log the resulting data about of the newly deployed contract using (logger)
-     */
+    const initialPrivateState = await StateraAPI.getPrivateState(providers);
+    
     const deployedContract = await deployContract<StateraContract>(providers, {
       contract: StateraContractInstance,
-      initialPrivateState: await StateraAPI.getPrivateState(providers),
+      initialPrivateState,
       privateStateId: stateraPrivateStateId,
       args: [
         utils.randomNonceBytes(32, logger),
@@ -217,7 +218,7 @@ export class StateraAPI implements DeployedStateraAPI {
     return new StateraAPI(providers, existingContract, logger);
   }
 
-  coin(amount: number): CoinInfo {
+  coin(amount: number): ShieldedCoinInfo {
     return {
       color: encodeTokenType(nativeToken()),
       nonce: utils.randomNonceBytes(32),
@@ -225,7 +226,7 @@ export class StateraAPI implements DeployedStateraAPI {
     };
   }
 
-  sUSD_coin(amount: number): CoinInfo {
+  sUSD_coin(amount: number): ShieldedCoinInfo {
     return {
       color: encodeTokenType(
         tokenType(utils.pad("sUSD_token", 32), this.deployedContractAddress)
@@ -287,11 +288,11 @@ export class StateraAPI implements DeployedStateraAPI {
     return txData;
   }
 
-  async setSUSDColor(): Promise<
+  async setSUSDColor(cpk: string): Promise<
     FinalizedCallTxData<StateraContract, "setSUSDTokenType">
   > {
     const txData =
-      await this.allReadyDeployedContract.callTx.setSUSDTokenType();
+      await this.allReadyDeployedContract.callTx.setSUSDTokenType(encodeCoinPublicKey(cpk));
 
     this.logger?.trace({
       transactionAdded: {
@@ -310,7 +311,8 @@ export class StateraAPI implements DeployedStateraAPI {
   async reset(
     liquidation_threshold: number,
     LVT: number,
-    MCR: number
+    MCR: number,
+    cpk: string
   ): Promise<FinalizedCallTxData<StateraContract, "resetProtocolConfig">> {
     const LiquidationThresholdInPercentage = (liquidation_threshold / 100) * this.SCALE;
     const LVTInPercentage = (LVT / 100) * this.SCALE;
@@ -320,7 +322,8 @@ export class StateraAPI implements DeployedStateraAPI {
       await this.allReadyDeployedContract.callTx.resetProtocolConfig(
         BigInt(LiquidationThresholdInPercentage),
         BigInt(LVTInPercentage),
-        BigInt(MCRInPercentage)
+        BigInt(MCRInPercentage),
+        encodeCoinPublicKey(cpk)
       );
 
     this.logger?.trace({
@@ -338,10 +341,12 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   async addAdmin(
-    addrs: string
+    newUserCpk: string,
+    cpk: string
   ): Promise<FinalizedCallTxData<StateraContract, "addAdmin">> {
     const txData = await this.allReadyDeployedContract.callTx.addAdmin(
-      encodeCoinPublicKey(addrs)
+      encodeCoinPublicKey(newUserCpk),
+      encodeCoinPublicKey(cpk)
     );
 
     this.logger?.trace({
@@ -359,10 +364,12 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   async addTrustedOracle(
-    oraclePk: string
+    oraclePk: string,
+    cpk: string
   ): Promise<FinalizedCallTxData<StateraContract, "addTrustedOracle">> {
     const txData = await this.allReadyDeployedContract.callTx.addTrustedOracle(
-      utils.hexStringToUint8Array(oraclePk)
+      utils.hexStringToUint8Array(oraclePk),
+      encodeCoinPublicKey(cpk)
     );
 
     this.logger?.trace({
@@ -380,11 +387,13 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   async removeTrustedOracle(
-    oraclePk: string
+    oraclePk: string,
+    cpk: string
   ): Promise<FinalizedCallTxData<StateraContract, "removeTrustedOraclePk">> {
     const txData =
       await this.allReadyDeployedContract.callTx.removeTrustedOraclePk(
-        utils.hexStringToUint8Array(oraclePk)
+        utils.hexStringToUint8Array(oraclePk),
+        encodeCoinPublicKey(cpk)
       );
 
     this.logger?.trace({
@@ -402,10 +411,12 @@ export class StateraAPI implements DeployedStateraAPI {
   }
 
   async transferSuperAdminRole(
-    addrs: string
-  ): Promise<FinalizedCallTxData<StateraContract, "transferAdminRole">> {
-    const txData = await this.allReadyDeployedContract.callTx.transferAdminRole(
-      encodeCoinPublicKey(addrs)
+    newUserCpk: string,
+    cpk: string
+  ): Promise<FinalizedCallTxData<StateraContract, "transferSuperAdminRole">> {
+    const txData = await this.allReadyDeployedContract.callTx.transferSuperAdminRole(
+      encodeCoinPublicKey(newUserCpk),
+      encodeCoinPublicKey(cpk)
     );
 
     this.logger?.trace({

@@ -17,7 +17,7 @@ import {
 import { Transaction as ZswapTransaction } from "@midnight-ntwrk/zswap";
 import {
   Transaction,
-  type CoinInfo,
+  type ShieldedCoinInfo,
   type TransactionId,
 } from "@midnight-ntwrk/ledger";
 import {
@@ -45,7 +45,7 @@ export const createWalletAndMidnightProvider = async (
     encryptionPublicKey: state.encryptionPublicKey,
     balanceTx(
       tx: UnbalancedTransaction,
-      newCoins: CoinInfo[]
+      newCoins: ShieldedCoinInfo[]
     ): Promise<BalancedTransaction> {
       return wallet
         .balanceTransaction(

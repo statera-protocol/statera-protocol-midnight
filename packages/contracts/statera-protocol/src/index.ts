@@ -1,2 +1,2 @@
-export * from "./managed/stateraProtocol/contract/index.cjs";
+export * from "./managed/stateraProtocol/contract/index.js";
 export * from "./witnesses.js"

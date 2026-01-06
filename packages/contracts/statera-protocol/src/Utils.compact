@@ -1,14 +1,16 @@
 module Utils {
-    import CompactStandardLibrary;
-    import "./GlobalProtocolLedgerStates";
     export { 
         MintMetadata, DivisionFunction, 
-        generateUserId, getMintMetadata, hashMintMetadata, 
+        getMintMetadata, hashMintMetadata, generateUserId,
         ComplianceToken, KYCTokenData, ValidityRange, ScaledDivisionFunction
     };
     
     /* Returns user local secrete key used for private ID generation */
     export witness secrete_key(): Bytes<32>;
+    
+    import CompactStandardLibrary;
+    import GlobalProtocolLedgerStates;
+
     witness division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
     witness scaled_division(divident: Uint<64>, divisor:Uint<64>): [Uint<64>, Uint<64>];
 
@@ -64,18 +66,6 @@ module Utils {
         return quotient;
     }
     
-
-    circuit generateUserId(sk: Bytes<32>): Bytes<32>{
-        return persistentHash<Vector<2, Bytes<32>>>(
-            [ 
-                pad(32, "susd:user"),
-                persistentHash<Vector<2, Bytes<32>>>(
-                    [sk, kernel.self().bytes]
-                )
-             ]
-        );
-    }
-
     circuit getMintMetadata(): MintMetadata{
         const {debt, collateral, borrowLimit} = disclose(get_mintmetadata_private_state());
         return MintMetadata {
@@ -84,7 +74,16 @@ module Utils {
             borrowLimit
         };
     } 
-
+    circuit generateUserId(sk: Bytes<32>, userType: Bytes<32>): Bytes<32>{
+        return persistentHash<Vector<2, Bytes<32>>>(
+            [ 
+                userType,
+                persistentHash<Vector<2, Bytes<32>>>(
+                    [sk, kernel.self().bytes]
+                )
+             ]
+        );
+    }
     circuit hashMintMetadata (metadata: MintMetadata, randomizer: Bytes<32>): Bytes<32> {
         return persistentCommit<MintMetadata>(metadata, randomizer);
     }

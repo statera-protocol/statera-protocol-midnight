@@ -33,7 +33,7 @@ import {
 } from "@midnight-ntwrk/midnight-js-types";
 import { WrappedPublicStateProvider } from "./publicStateProvider";
 import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
-import type { CoinInfo } from "@midnight-ntwrk/compact-runtime";
+import type { ShieldedCoinInfo } from "@midnight-ntwrk/compact-runtime";
 import {
   getLedgerNetworkId,
   getZswapNetworkId,
@@ -150,7 +150,7 @@ const MidnightWalletProvider = ({
         encryptionPublicKey: walletAPI.encryptionPublicKey,
         balanceTx(
           tx: UnbalancedTransaction,
-          newCoins: CoinInfo[]
+          newCoins: ShieldedCoinInfo[]
         ): Promise<BalancedTransaction> {
           return walletAPI.wallet
             .balanceAndProveTransaction(

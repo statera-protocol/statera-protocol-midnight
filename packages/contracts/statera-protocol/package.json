@@ -16,8 +16,8 @@
     }
   },
   "scripts": {
-    "compact": "compact compile --skip-zk src/stateraProtocol.compact ./src/managed/stateraProtocol",
-    "compact-dev": "compact compile src/stateraProtocol.compact ./src/managed/stateraProtocol",
+    "compact": "compactc --skip-zk src/stateraProtocol.compact ./src/managed/stateraProtocol",
+    "compact-dev": "compactc src/stateraProtocol.compact ./src/managed/stateraProtocol",
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/stateraProtocol.compact dist",
     "prebuild": "rm -rf dist && tsc --project tsconfig.build.json && cp -R ./src/managed ./dist/managed && cp ./src/stateraProtocol.compact dist",
     "lint": "eslint src",

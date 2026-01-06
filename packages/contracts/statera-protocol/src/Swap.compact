@@ -1,17 +1,16 @@
 module Swap{
     import CompactStandardLibrary;
-    import "./GlobalProtocolLedgerStates";
-
+    import GlobalProtocolLedgerStates;
 
     /* Entry point for swapping other stable coin to sUSD on a 1:1 basis */
-    export circuit swapForsUSD(coin_: CoinInfo): Uint<128>{
+    export circuit swapForsUSD(coin_: ShieldedCoinInfo): Uint<128>{
         const disclosedCoin = disclose(coin_);
         /* Recieve token */
         recieveAndAddToSwapPoolTVL(disclosedCoin);
         
         /* Mint sUSD */
         const newNonce = evolveNonce(mintCounter, nonce);
-        mintToken(pad(32, "sUSD_token"), disclosedCoin.value as Uint<64>, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
+        mintShieldedToken(pad(32, "sUSD_token"), disclosedCoin.value as Uint<64>, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
         
         mintCounter.increment(1);
         totalMint = (totalMint + disclosedCoin.value) as Uint<128>;
@@ -20,16 +19,16 @@ module Swap{
     }
 
     /* Entry point for swapping sUSD to other stable coin */
-    export circuit swapsUSDForToken(coin_: CoinInfo, tokenType_: Bytes<32>): Uint<128>{
+    export circuit swapsUSDForToken(coin_: ShieldedCoinInfo, tokenType_: Bytes<32>): Uint<128>{
         const disclosedCoin = disclose(coin_);
         const disclosedTokenType = disclose(tokenType_);
         assert (acceptedSwapTokens.member(disclosedTokenType), "Can not swap sUSD for specified token type");
         
-        const burnAddrs = burnAddress();
+        const burnAddrs = shieldedBurnAddress();
         /* Burn returned sUSD  */
-        receive(disclosedCoin);
+        receiveShielded(disclosedCoin);
         //Send immediately to desired address
-        sendImmediate(disclosedCoin, burnAddrs, disclosedCoin.value);
+        sendImmediateShielded(disclosedCoin, burnAddrs, disclosedCoin.value);
         /* Send stablecoin and manage balance */
         sendFromSwapPoolAndManageChange(ownPublicKey(), disclosedCoin.value as Uint<64>, disclosedTokenType);
 

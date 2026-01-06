@@ -2,30 +2,34 @@ import {
   CircuitContext,
   CircuitResults,
   constructorContext,
+  encodeCoinPublicKey,
+  NetworkId,
   QueryContext,
 } from "@midnight-ntwrk/compact-runtime";
 import {
-  CoinInfo,
+  ShieldedCoinInfo,
   ComplianceToken,
   Contract,
   ledger,
   Ledger,
   Witnesses,
-} from "../src/managed/stateraProtocol/contract/index.cjs";
+} from "../src/managed/stateraProtocol/contract/index.js";
 import { StateraPrivateState, witnesses } from "../src/witnesses";
 import {
   encodeTokenType,
   nativeToken,
+  sampleCoinPublicKey,
   sampleContractAddress,
   tokenType,
 } from "@midnight-ntwrk/ledger";
 import { hexStringToUint8Array, pad, randomBytes } from "./utils";
+import { parseCoinPublicKeyToHex } from "@midnight-ntwrk/midnight-js-utils";
 
 export type StateraContract = Contract<
   StateraPrivateState,
   Witnesses<StateraPrivateState>
 >;
-
+const sampleCPK = randomBytes(32);
 export class StateraProtocolSimulator {
   readonly contract: StateraContract;
   turnContext: CircuitContext<StateraPrivateState>;
@@ -34,6 +38,7 @@ export class StateraProtocolSimulator {
   readonly contractAddress: string;
   readonly testComplianceToken: ComplianceToken;
   private testOraclPrice: number;
+  private readonly sampleSuperAdminCPK: Uint8Array;
 
   constructor(privateState: StateraPrivateState) {
     this.SCALE = 1_000_000;
@@ -48,10 +53,10 @@ export class StateraProtocolSimulator {
       BigInt(1.10 * this.SCALE),
       BigInt(0.8 * this.SCALE),
       BigInt(1.20 * this.SCALE),
-      encodeTokenType(nativeToken())
+      encodeTokenType(nativeToken()),
     );
     this.contractAddress = sampleContractAddress();
-    this.updateUserPrivateState = (newPrivateState: StateraPrivateState) => {};
+    this.updateUserPrivateState = (newPrivateState: StateraPrivateState) => { };
     this.turnContext = {
       currentPrivateState,
       currentZswapLocalState,
@@ -61,6 +66,7 @@ export class StateraProtocolSimulator {
         this.contractAddress
       ),
     };
+    this.sampleSuperAdminCPK = sampleCPK;
     this.testOraclPrice = 0.91 * this.SCALE;
     this.testComplianceToken = {
       oracleSignature: hexStringToUint8Array(
@@ -87,7 +93,8 @@ export class StateraProtocolSimulator {
         debt: 0n,
         borrowLimit: 0n,
       },
-    });
+    }
+    );
   }
 
   public buildTurnContext(
@@ -120,7 +127,7 @@ export class StateraProtocolSimulator {
     return currentPrice;
   }
 
-  coin(amount: number): CoinInfo {
+  coin(amount: number): ShieldedCoinInfo {
     return {
       color: encodeTokenType(nativeToken()),
       nonce: randomBytes(32),
@@ -128,7 +135,7 @@ export class StateraProtocolSimulator {
     };
   }
 
-  sUSD_coin(amount: number): CoinInfo {
+  sUSD_coin(amount: number): ShieldedCoinInfo {
     return {
       color: encodeTokenType(
         tokenType(pad("sUSD_token", 32), this.contractAddress)
@@ -198,26 +205,27 @@ export class StateraProtocolSimulator {
         this.turnContext,
         BigInt(newLT),
         BigInt(newLTV),
-        BigInt(newMCR)
+        BigInt(newMCR),
+        this.sampleSuperAdminCPK
       )
     );
   }
 
   setSUSDTokenTYpe(): Ledger {
     return this.updateStateAndGetLedgerState(
-      this.contract.impureCircuits.setSUSDTokenType(this.turnContext)
+      this.contract.impureCircuits.setSUSDTokenType(this.turnContext, sampleCPK)
     );
   }
 
   addTrustedOracle(oraclePk: Uint8Array): Ledger {
     return this.updateStateAndGetLedgerState(
-      this.contract.impureCircuits.addTrustedOracle(this.turnContext, oraclePk)
+      this.contract.impureCircuits.addTrustedOracle(this.turnContext, oraclePk, this.sampleSuperAdminCPK)
     );
   }
 
   addAdmin(cPK: Uint8Array): Ledger {
     return this.updateStateAndGetLedgerState(
-      this.contract.impureCircuits.addAdmin(this.turnContext, cPK)
+      this.contract.impureCircuits.addAdmin(this.turnContext, cPK, this.sampleSuperAdminCPK)
     );
   }
 
@@ -225,23 +233,25 @@ export class StateraProtocolSimulator {
     return this.updateStateAndGetLedgerState(
       this.contract.impureCircuits.removeTrustedOraclePk(
         this.turnContext,
-        oraclePk
+        oraclePk,
+        this.sampleSuperAdminCPK
       )
     );
   }
 
-    addAcceptedStableToken(oraclePk: Uint8Array){
-      return this.updateStateAndGetLedgerState(
-          this.contract.impureCircuits.addSwapToken(
-              this.turnContext,
-              oraclePk
-          )
+  addAcceptedStableToken(oraclePk: Uint8Array) {
+    return this.updateStateAndGetLedgerState(
+      this.contract.impureCircuits.addSwapToken(
+        this.turnContext,
+        oraclePk,
+        this.sampleSuperAdminCPK
       )
-    }
+    )
+  }
 
   transferSuperAdminRole(cPK: Uint8Array): Ledger {
     return this.updateStateAndGetLedgerState(
-      this.contract.impureCircuits.transferAdminRole(this.turnContext, cPK)
+      this.contract.impureCircuits.transferSuperAdminRole(this.turnContext, cPK, this.sampleSuperAdminCPK)
     );
   }
 

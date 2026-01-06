@@ -3,8 +3,7 @@ import {
   Witnesses,
   StateraPrivateState,
   Depositor,
-  Staker,
-  QualifiedCoinInfo,
+  Staker
 } from "@statera/statera-protocol";
 import { MidnightProviders } from "@midnight-ntwrk/midnight-js-types";
 import { type FoundContract } from "@midnight-ntwrk/midnight-js-contracts";
@@ -21,11 +20,7 @@ export type TokenCircuitKeys = Exclude<
   keyof StateraContract["impureCircuits"],
   number | symbol
 >;
-export type StateraContractProviders = MidnightProviders<
-  TokenCircuitKeys,
-  StateraPrivateStateId,
-  StateraPrivateState
->;
+export type StateraContractProviders = MidnightProviders<TokenCircuitKeys, StateraPrivateStateId, StateraPrivateState>;
 export type DeployedStateraOnchainContract = FoundContract<StateraContract>;
 export type DerivedStateraContractState = {
   readonly mintCounter: bigint;

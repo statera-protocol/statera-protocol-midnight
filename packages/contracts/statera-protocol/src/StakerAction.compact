@@ -1,7 +1,7 @@
 module StakerAction {
     import CompactStandardLibrary;
-    import "./GlobalProtocolLedgerStates";
-    import "./Utils";
+    import GlobalProtocolLedgerStates;
+    import Utils;
 
     /* Mapping for stakers --> addrs -> Staker */
     export ledger stakers: Map<Bytes<32>, Staker>;
@@ -16,12 +16,12 @@ module StakerAction {
     }
 
     /* INTERACTIONS FOR STAKERS */
-    export circuit depositToStabilityPool(coin: CoinInfo): [] {
+    export circuit depositToStabilityPool(coin: ShieldedCoinInfo): [] {
         const disclosedCoin = disclose(coin);
         assert (coin.color == sUSDTokenType, "Invalid coin type provided to pool");
 
         // Receives and write to coin balance
-        receive(disclosedCoin);    
+        receiveShielded(disclosedCoin);    
         /* Writes coin to the protocolStakeTVL*/
         if(stakers.isEmpty()){
             // Writes coin generated within the tx as first stake
@@ -32,7 +32,7 @@ module StakerAction {
         }
 
         // Updates statbility pool mapping
-        const stakersId = generateUserId(disclose(secrete_key()));
+        const stakersId = generateUserId(disclose(secrete_key()), pad(32, "susd:user"));
         // Inserts the new stake detail with the user's adddress as key
         stakers.member(ownPublicKey().bytes) ? 
         stakers.insert(ownPublicKey().bytes, Staker{
@@ -57,7 +57,7 @@ module StakerAction {
         
         const stakePosition = stakers.lookup(ownPublicKey().bytes);
         // Verifies users stake id using their secret_key
-        const stakersId = generateUserId(disclose(secrete_key()));
+        const stakersId = generateUserId(disclose(secrete_key()), pad(32, "susd:user"));
         assert (stakersId == stakePosition.id, "You are not a staker: Invalid staker ID");
         // Recalculate the cumulative scale fator to see if it has increased or not
         const currentCollateralRewardPerSUSD = ScaledDivisionFunction((totalLiquidatedAsset * SCALE) as Uint<64>, protocolStakeTVL.value as Uint<64>) as Uint<128>;
@@ -94,7 +94,7 @@ module StakerAction {
         
         // Sends the pending ADA to the staker
         const amountToSend = disclose(amount) as Uint<64>;
-        const sendResult = send(protocolReserveTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), amountToSend);
+        const sendResult = sendShielded(protocolReserveTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), amountToSend);
    
         sendResult.change.is_some ? 
         protocolReserveTVL.writeCoin(sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self())) :
@@ -117,9 +117,9 @@ module StakerAction {
         const stakePosition = stakers.lookup(ownPublicKey().bytes);
 
         assert (_amount <= stakePosition.effectiveUserBalance, "Can not withdraw more than available stake balance");
-        const stakersId = generateUserId(disclose(secrete_key()));
+        const stakersId = generateUserId(disclose(secrete_key()), pad(32, "susd:user"));
         assert (stakersId == stakePosition.id, "Cannot withdraw stake, you are not the owner");
-        const sendResult = send(protocolStakeTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmount);
+        const sendResult = sendShielded(protocolStakeTVL, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()), disclosedAmount);
         const balance = stakePosition.effectiveUserBalance - disclosedAmount;
 
         sendResult.change.is_some ? 
@@ -132,6 +132,6 @@ module StakerAction {
         };
 
         stakers.insert(ownPublicKey().bytes, updatedStakePosition);
-    
+    }
 
 }

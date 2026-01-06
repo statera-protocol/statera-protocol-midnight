@@ -31,19 +31,19 @@ module GlobalProtocolLedgerStates {
     export ledger stateritePersUSD: Uint<64>; // Unit of statera USD (1000000 stateritePersUSD => 1sUSD)
 
     /* Tracks assets stored within the smart contract */
-    export ledger protocolReserveTVL: QualifiedCoinInfo;
-    export ledger protocolSwapTVL: Map<Bytes<32>, QualifiedCoinInfo>;
+    export ledger protocolReserveTVL: QualifiedShieldedCoinInfo;
+    export ledger protocolSwapTVL: Map<Bytes<32>, QualifiedShieldedCoinInfo>;
 
     /* Mapping to keep track of sUSD coin input into the stakePool */
-    export ledger protocolStakeTVL: QualifiedCoinInfo;
+    export ledger protocolStakeTVL: QualifiedShieldedCoinInfo;
 
     export ledger acceptedSwapTokens : Set<Bytes<32>>; // Keeps track of the list of acccepted stable coin that caan be de1posited for mint
 
 
     /**** Helper functions for managing protocol reserve funds ****/
-    export circuit recieveAndAddToSwapPoolTVL(disclosedCoin: CoinInfo): []{
+    export circuit recieveAndAddToSwapPoolTVL(disclosedCoin: ShieldedCoinInfo): []{
         // Recieves the coin into the contract
-        receive(disclosedCoin);
+        receiveShielded(disclosedCoin);
 
         //Update protocol
         const coinToInsert = protocolSwapTVL.member(disclosedCoin.color) ?
@@ -56,7 +56,7 @@ module GlobalProtocolLedgerStates {
     export circuit sendFromSwapPoolAndManageChange(address: ZswapCoinPublicKey, amount: Uint<64>, coinType: Bytes<32>): []{
         const protocolBalanceToSendFrom = protocolSwapTVL.lookup(coinType);
 
-        const sendResult = send(protocolBalanceToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(address), amount);
+        const sendResult = sendShielded(protocolBalanceToSendFrom, left<ZswapCoinPublicKey, ContractAddress>(address), amount);
         if(sendResult.change.is_some){
             protocolSwapTVL.insertCoin(coinType, sendResult.change.value, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
         }else{
