@@ -1,7 +1,8 @@
 # Statera over-collateralized stablecoin protocol (sUSD)
 ## Overview
 **Statera** is a privacy-preserving, over-collateralized stablecoin protocol built on the Midnight blockchain, inspired by Aave's lending mechanics. The protocol enables users to deposit collateral (ADA) privately and mint sUSD (Statera USD) tokens while maintaining complete privacy of their financial positions through zero-knowledge proofs.
-
+## Attribution
+This project is built on the Midnight Network
 ### Key Features
 - **Privacy-First**: All collateral amounts and debt positions are stored off-chain using witnesses
 - **Over-Collateralized**: Requires collateral ratios above 100% to ensure stability
